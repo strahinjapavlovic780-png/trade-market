@@ -2,6 +2,8 @@ import discord
 from discord.ext import commands
 import os
 import json
+import io
+from datetime import datetime
 
 VOUCH_FILE = "vouches.json"
 PURPLE = discord.Color.purple()
@@ -82,6 +84,45 @@ async def get_log_channel(guild):
 
     return channel
 
+async def save_ticket_transcript(channel):
+    messages = []
+    async for message in channel.history(limit=None, oldest_first=True):
+        created = message.created_at.strftime("%Y-%m-%d %H:%M:%S")
+        author = f"{message.author} ({message.author.id})"
+        content = message.content if message.content else "[No text content]"
+
+        if message.attachments:
+            attachment_urls = "\n".join(att.url for att in message.attachments)
+            content += f"\n[Attachments]\n{attachment_urls}"
+
+        messages.append(f"[{created}] {author}: {content}")
+
+    transcript_text = "\n".join(messages) if messages else "No messages in this ticket."
+    return io.BytesIO(transcript_text.encode("utf-8"))
+    
+command_cooldowns = {}
+
+def has_any_role(member, *role_ids):
+    return any(role.id in role_ids for role in member.roles)
+
+def is_owner_bypass(member):
+    return has_any_role(member, OWNER_ROLE_ID)
+
+def check_command_cooldown(user_id: int, command_name: str, seconds: int = 300):
+    now = datetime.now(timezone.utc).timestamp()
+    key = f"{user_id}:{command_name}"
+
+    last_used = command_cooldowns.get(key)
+    if last_used is None:
+        command_cooldowns[key] = now
+        return True, 0
+
+    remaining = seconds - (now - last_used)
+    if remaining > 0:
+        return False, int(remaining)
+
+    command_cooldowns[key] = now
+    return True, 0
 
 # ================= PANEL SELECT =================
 
@@ -299,16 +340,36 @@ class TicketButtons(discord.ui.View):
             ephemeral=True
         )
 
-    @discord.ui.button(label="Close", style=discord.ButtonStyle.red)
-    async def close(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if MM_ROLE_ID not in [role.id for role in interaction.user.roles]:
-            return await interaction.response.send_message(
-                "Only MM team can close tickets.",
-                ephemeral=True
-            )
+@discord.ui.button(label="Close", style=discord.ButtonStyle.red)
+async def close(self, interaction: discord.Interaction, button: discord.ui.Button):
+    if MM_ROLE_ID not in [role.id for role in interaction.user.roles]:
+        return await interaction.response.send_message(
+            "Only MM team can close tickets.",
+            ephemeral=True
+        )
 
-        await interaction.response.send_message("Closing ticket...")
-        await interaction.channel.delete()
+    log_channel = await get_log_channel(interaction.guild)
+    transcript_file = await save_ticket_transcript(interaction.channel)
+
+    close_embed = discord.Embed(
+        title="💜 Trade Market | Ticket Closed",
+        description=(
+            f"**Channel:** {interaction.channel.name}\n"
+            f"**Closed by:** {interaction.user.mention}\n"
+            f"**Created by:** {self.creator.mention}"
+        ),
+        color=PURPLE
+    )
+    close_embed.set_footer(text="Trade Market | Ticket Logs")
+
+    if log_channel:
+        await log_channel.send(
+            embed=close_embed,
+            file=discord.File(transcript_file, filename=f"{interaction.channel.name}-transcript.txt")
+        )
+
+    await interaction.response.send_message("Closing ticket...")
+    await interaction.channel.delete()
 
 
 # ================= COMMANDS =================
@@ -390,6 +451,25 @@ async def close(ctx):
     if MM_ROLE_ID not in [role.id for role in ctx.author.roles]:
         return await ctx.send("❌ Only MM team can close tickets.")
 
+    log_channel = await get_log_channel(ctx.guild)
+    transcript_file = await save_ticket_transcript(ctx.channel)
+
+    close_embed = discord.Embed(
+        title="💜 Trade Market | Ticket Closed",
+        description=(
+            f"**Channel:** {ctx.channel.name}\n"
+            f"**Closed by:** {ctx.author.mention}"
+        ),
+        color=PURPLE
+    )
+    close_embed.set_footer(text="Trade Market | Ticket Logs")
+
+    if log_channel:
+        await log_channel.send(
+            embed=close_embed,
+            file=discord.File(transcript_file, filename=f"{ctx.channel.name}-transcript.txt")
+        )
+
     await ctx.send("Closing ticket...")
     await ctx.channel.delete()
 
@@ -415,6 +495,39 @@ async def unclaim(ctx):
     embed.set_footer(text="Trade Market | Ticket System")
 
     await ctx.channel.send(embed=embed)
+
+# ================= SERVER COMMAND =================
+
+@bot.command()
+async def server(ctx):
+    guild = ctx.guild
+    total_members = guild.member_count
+    humans = sum(1 for member in guild.members if not member.bot)
+    bots = sum(1 for member in guild.members if member.bot)
+    channels = len(guild.channels)
+    roles = len(guild.roles)
+    created = guild.created_at.strftime("%Y-%m-%d")
+
+    embed = discord.Embed(
+        title=f"💜 {guild.name} | Server Info",
+        description=(
+            "# Server Overview\n\n"
+            f"**Owner:** <@{guild.owner_id}>\n"
+            f"**Created:** {created}\n"
+            f"**Members:** {total_members}\n"
+            f"**Humans:** {humans}\n"
+            f"**Bots:** {bots}\n"
+            f"**Channels:** {channels}\n"
+            f"**Roles:** {roles}"
+        ),
+        color=PURPLE
+    )
+
+    if guild.icon:
+        embed.set_thumbnail(url=guild.icon.url)
+
+    embed.set_footer(text=f"{guild.name} | Official Server Information")
+    await ctx.send(embed=embed)
 
 
 # ================= PANEL COMMAND =================
@@ -668,7 +781,6 @@ async def confirm(ctx, user1: discord.Member, user2: discord.Member):
 
     await ctx.send(embed=embed)
 
-
 # ================= HELP =================
 
 @bot.command()
@@ -677,19 +789,21 @@ async def help(ctx):
         return await ctx.send("❌ Only the Founder can use this command.")
 
     embed = discord.Embed(
-        title=f"💜 {ctx.guild.name} | Bot Commands",
-        description="Here is a list of all available commands:",
+        title=f"💜 {ctx.guild.name} | Help Menu",
+        description=(
+            "# Command Categories\n\n"
+            "Here is a list of all available commands, sorted by category."
+        ),
         color=PURPLE
     )
 
     embed.add_field(
-        name="ℹ️ Server Info",
+        name="1️⃣ Info",
         value=(
             "`!about` — About the server 💜\n"
             "`!tos` — Server TOS 💜\n"
             "`!rules` — Server rules 📜\n"
             "`!support` — Server Support 🆘\n"
-            "`!mmtos` — Middleman Terms of Service 🛡️\n"
             "`!value` — Official Value List 🎮\n"
             "`!marketrules` — Marketplace Rules 🛒\n"
             "`!staffapp` — Staff Application 📝"
@@ -698,82 +812,77 @@ async def help(ctx):
     )
 
     embed.add_field(
-        name="🎟 Ticket System",
+        name="2️⃣ Middleman",
         value=(
-            "`!panel` – Sends the Middleman panel\n"
-            "`!close` – Closes the current ticket\n"
-            "`!add @user` – Add user to ticket\n"
-            "`!remove @user` – Remove user from ticket\n"
-            "`!unclaim` – Unclaim the ticket"
+            "`!panel` — Sends the Middleman panel\n"
+            "`!mmtos` — Middleman Terms of Service 🛡️\n"
+            "`!howmmworks` — Explains how MM works\n"
+            "`!policy` — Shows compensation policy\n"
+            "`!fee` — Sends fee agreement\n"
+            "`!confirm @user1 @user2` — Confirms trade\n"
+            "`!mercy @user` — Offer mercy to a user"
         ),
         inline=False
     )
 
     embed.add_field(
-        name="🔒 Claim System",
+        name="3️⃣ Ticket System",
         value=(
-            "`!claim` – Claim the current ticket\n"
-            "`Claim Button` – Claims ticket\n"
-            "`Unclaim Button` – Unclaims ticket"
+            "`!claim` — Claim the current ticket\n"
+            "`!unclaim` — Unclaim the ticket\n"
+            "`!close` — Closes the current ticket\n"
+            "`!add @user` — Add user to ticket\n"
+            "`!remove @user` — Remove user from ticket"
         ),
         inline=False
     )
 
     embed.add_field(
-        name="💰 Fee System",
+        name="4️⃣ Vouch System",
         value=(
-            "`!fee` – Sends fee agreement\n"
-            "`50/50 Button` – Split fee\n"
-            "`100% Button` – One user pays full fee\n"
-            "`Custom Split` – Custom fee split"
+            "`!vouch @user` — Add 1 vouch\n"
+            "`!vouches [@user]` — Check vouches\n"
+            "`!topvouches` — Shows top vouches\n"
+            "`!addvouch @user <amount>` — Add vouches (MM ONLY)\n"
+            "`!removevouch @user` — Remove vouches (MM ONLY)"
         ),
         inline=False
     )
 
     embed.add_field(
-        name="✅ Trade Confirmation",
-        value="`!confirm @user1 @user2` – Confirms trade",
-        inline=False
-    )
-
-    embed.add_field(
-        name="ℹ️ Information",
+        name="5️⃣ Moderation",
         value=(
-            "`!howmmworks` – Explains how MM works\n"
-            "`!policy` – Shows compensation policy"
+            "`!purge <amount>` — Delete messages\n"
+            "`!warn @user <reason>` — Warn a user\n"
+            "`!warns @user` — Check warns\n"
+            "`!unwarn @user` — Remove warn\n"
+            "`!kick @user <reason>` — Kick user\n"
+            "`!ban @user <reason>` — Ban user\n"
+            "`!unban <user_id> <reason>` — Unban user\n"
+            "`!timeout @user <minutes> <reason>` — Timeout user\n"
+            "`!untimeout @user <reason>` — Remove timeout\n"
+            "`!uto @user <reason>` — Short alias for untimeout"
         ),
         inline=False
     )
 
     embed.add_field(
-        name="⭐ Vouch Commands",
+        name="6️⃣ Extra Information",
         value=(
-            "`!addvouch @user <amount>` – Add vouches (MM ONLY)\n"
-            "`!removevouch @user` – Remove vouches (MM ONLY)\n"
-            "`!vouches [@user]` – Check vouches (MM ONLY)\n"
-            "`!vouch @user` – Add 1 vouch"
+            "`50/50 Button` — Split fee\n"
+            "`100% Button` — One user pays full fee\n"
+            "`Custom Split` — Custom fee split\n"
+            "`Claim Button` — Claims ticket\n"
+            "`Unclaim Button` — Unclaims ticket"
         ),
         inline=False
     )
 
-    embed.add_field(
-        name="⚖️ Mercy",
-        value="`!mercy @user` – Offer mercy to a user (MM ONLY)",
-        inline=False
-    )
+    embed.set_footer(text=f"{ctx.guild.name} | Official Help Menu")
 
-    embed.add_field(
-        name="🛠 Moderation Commands",
-        value=(
-            "`!purge <amount>` — Delete messages (Lead)\n"
-            "`!warn @user <reason>` — Warn a user (Lead)\n"
-            "`!warns @user` — Check warns (Lead)\n"
-            "`!unwarn @user` — Remove warn (Lead)"
-        ),
-        inline=False
-    )
+    if ctx.guild.icon:
+        embed.set_thumbnail(url=ctx.guild.icon.url)
 
-    embed.set_footer(text=f"{ctx.guild.name} | Official Bot")
     await ctx.send(embed=embed)
 
 
@@ -885,6 +994,30 @@ async def vouch(ctx, member: discord.Member):
     embed.set_thumbnail(url=member.display_avatar.url)
     embed.set_footer(text=f"{ctx.guild.name} | Vouch System")
 
+    await ctx.send(embed=embed)
+    
+@bot.command()
+async def topvouches(ctx):
+    vouches_data = load_vouches()
+
+    if not vouches_data:
+        return await ctx.send("❌ No vouches found yet.")
+
+    sorted_vouches = sorted(vouches_data.items(), key=lambda x: x[1], reverse=True)[:10]
+
+    lines = []
+    for index, (user_id, count) in enumerate(sorted_vouches, start=1):
+        member = ctx.guild.get_member(int(user_id))
+        name = member.mention if member else f"<@{user_id}>"
+        lines.append(f"**{index}.** {name} — **{count}** vouches")
+
+    embed = discord.Embed(
+        title="💜 Trade Market | Top Vouches",
+        description="# 🏆 Top Trusted Members\n\n" + "\n".join(lines),
+        color=PURPLE
+    )
+
+    embed.set_footer(text=f"{ctx.guild.name} | Vouch Leaderboard")
     await ctx.send(embed=embed)
 
 
@@ -1425,6 +1558,210 @@ async def support(ctx):
 
     embed.set_footer(text="Trade Market | Support Team")
     await ctx.send(embed=embed)
+
+# ================= MODERATION =================
+
+@bot.command()
+async def kick(ctx, member: discord.Member, *, reason="No reason provided"):
+    if not has_any_role(ctx.author, EXECUTIVE_ROLE_ID):
+        return await ctx.send("❌ Only Executive can use this command.")
+
+    if not is_owner_bypass(ctx.author):
+        allowed, remaining = check_command_cooldown(ctx.author.id, "kick", 300)
+        if not allowed:
+            return await ctx.send(f"❌ Cooldown active. Try again in **{remaining}s**.")
+
+    action_time = discord.utils.utcnow()
+
+    embed = discord.Embed(
+        title="💜 Trade Market | User Kicked",
+        description=(
+            "# 👢 Kick Executed\n\n"
+            f"**User:** {member.mention}\n"
+            f"**Username:** {member}\n"
+            f"**User ID:** {member.id}\n"
+            f"**Moderator:** {ctx.author.mention}\n"
+            f"**Moderator ID:** {ctx.author.id}\n"
+            f"**Reason:** {reason}\n"
+            f"**Account Created:** <t:{int(member.created_at.timestamp())}:F>\n"
+            f"**Action Time:** <t:{int(action_time.timestamp())}:F>"
+        ),
+        color=PURPLE
+    )
+
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text="Trade Market | Moderation System")
+
+    await member.kick(reason=f"{reason} | By: {ctx.author}")
+
+    await ctx.send(embed=embed)
+
+    log = await get_log_channel(ctx.guild)
+    if log:
+        await log.send(embed=embed)
+
+
+@bot.command()
+async def ban(ctx, member: discord.Member, *, reason="No reason provided"):
+    if not has_any_role(ctx.author, EXECUTIVE_ROLE_ID):
+        return await ctx.send("❌ Only Executive can use this command.")
+
+    if not is_owner_bypass(ctx.author):
+        allowed, remaining = check_command_cooldown(ctx.author.id, "ban", 300)
+        if not allowed:
+            return await ctx.send(f"❌ Cooldown active. Try again in **{remaining}s**.")
+
+    action_time = discord.utils.utcnow()
+
+    embed = discord.Embed(
+        title="💜 Trade Market | User Banned",
+        description=(
+            "# 🔨 Ban Executed\n\n"
+            f"**User:** {member.mention}\n"
+            f"**Username:** {member}\n"
+            f"**User ID:** {member.id}\n"
+            f"**Moderator:** {ctx.author.mention}\n"
+            f"**Moderator ID:** {ctx.author.id}\n"
+            f"**Reason:** {reason}\n"
+            f"**Account Created:** <t:{int(member.created_at.timestamp())}:F>\n"
+            f"**Action Time:** <t:{int(action_time.timestamp())}:F>"
+        ),
+        color=PURPLE
+    )
+
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text="Trade Market | Moderation System")
+
+    await ctx.guild.ban(member, reason=f"{reason} | By: {ctx.author}")
+
+    await ctx.send(embed=embed)
+
+    log = await get_log_channel(ctx.guild)
+    if log:
+        await log.send(embed=embed)
+
+
+@bot.command()
+async def unban(ctx, user_id: int, *, reason="No reason provided"):
+    if not has_any_role(ctx.author, EXECUTIVE_ROLE_ID):
+        return await ctx.send("❌ Only Executive can use this command.")
+
+    if not is_owner_bypass(ctx.author):
+        allowed, remaining = check_command_cooldown(ctx.author.id, "unban", 300)
+        if not allowed:
+            return await ctx.send(f"❌ Cooldown active. Try again in **{remaining}s**.")
+
+    user = await bot.fetch_user(user_id)
+
+    action_time = discord.utils.utcnow()
+
+    embed = discord.Embed(
+        title="💜 Trade Market | User Unbanned",
+        description=(
+            "# ✅ Unban Executed\n\n"
+            f"**User:** {user.mention}\n"
+            f"**Username:** {user}\n"
+            f"**User ID:** {user.id}\n"
+            f"**Moderator:** {ctx.author.mention}\n"
+            f"**Moderator ID:** {ctx.author.id}\n"
+            f"**Reason:** {reason}\n"
+            f"**Account Created:** <t:{int(user.created_at.timestamp())}:F>\n"
+            f"**Action Time:** <t:{int(action_time.timestamp())}:F>"
+        ),
+        color=PURPLE
+    )
+
+    embed.set_thumbnail(url=user.display_avatar.url)
+    embed.set_footer(text="Trade Market | Moderation System")
+
+    await ctx.guild.unban(user, reason=f"{reason} | By: {ctx.author}")
+
+    await ctx.send(embed=embed)
+
+    log = await get_log_channel(ctx.guild)
+    if log:
+        await log.send(embed=embed)
+
+
+@bot.command()
+async def timeout(ctx, member: discord.Member, minutes: int, *, reason="No reason provided"):
+    if not has_any_role(ctx.author, STAFF_ROLE_ID):
+        return await ctx.send("❌ Only Staff can use this command.")
+
+    if not is_owner_bypass(ctx.author):
+        allowed, remaining = check_command_cooldown(ctx.author.id, "timeout", 300)
+        if not allowed:
+            return await ctx.send(f"❌ Cooldown active. Try again in **{remaining}s**.")
+
+    until = discord.utils.utcnow() + timedelta(minutes=minutes)
+
+    action_time = discord.utils.utcnow()
+
+    embed = discord.Embed(
+        title="💜 Trade Market | User Timed Out",
+        description=(
+            "# ⏳ Timeout Executed\n\n"
+            f"**User:** {member.mention}\n"
+            f"**Username:** {member}\n"
+            f"**User ID:** {member.id}\n"
+            f"**Duration:** {minutes} minutes\n"
+            f"**Moderator:** {ctx.author.mention}\n"
+            f"**Reason:** {reason}\n"
+            f"**Account Created:** <t:{int(member.created_at.timestamp())}:F>\n"
+            f"**Action Time:** <t:{int(action_time.timestamp())}:F>"
+        ),
+        color=PURPLE
+    )
+
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text="Trade Market | Moderation System")
+
+    await member.edit(timed_out_until=until, reason=f"{reason} | By: {ctx.author}")
+
+    await ctx.send(embed=embed)
+
+    log = await get_log_channel(ctx.guild)
+    if log:
+        await log.send(embed=embed)
+
+
+@bot.command(aliases=["uto"])
+async def untimeout(ctx, member: discord.Member, *, reason="No reason provided"):
+    if not has_any_role(ctx.author, STAFF_ROLE_ID):
+        return await ctx.send("❌ Only Staff can use this command.")
+
+    if not is_owner_bypass(ctx.author):
+        allowed, remaining = check_command_cooldown(ctx.author.id, "untimeout", 300)
+        if not allowed:
+            return await ctx.send(f"❌ Cooldown active. Try again in **{remaining}s**.")
+
+    action_time = discord.utils.utcnow()
+
+    embed = discord.Embed(
+        title="💜 Trade Market | Timeout Removed",
+        description=(
+            "# 🔓 Timeout Removed\n\n"
+            f"**User:** {member.mention}\n"
+            f"**Username:** {member}\n"
+            f"**User ID:** {member.id}\n"
+            f"**Moderator:** {ctx.author.mention}\n"
+            f"**Reason:** {reason}\n"
+            f"**Account Created:** <t:{int(member.created_at.timestamp())}:F>\n"
+            f"**Action Time:** <t:{int(action_time.timestamp())}:F>"
+        ),
+        color=PURPLE
+    )
+
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text="Trade Market | Moderation System")
+
+    await member.edit(timed_out_until=None, reason=f"{reason} | By: {ctx.author}")
+
+    await ctx.send(embed=embed)
+
+    log = await get_log_channel(ctx.guild)
+    if log:
+        await log.send(embed=embed)
 
 
 @bot.event
