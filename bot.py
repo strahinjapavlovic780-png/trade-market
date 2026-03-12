@@ -859,9 +859,8 @@ async def help(ctx):
             "`!kick @user <reason>` — Kick user\n"
             "`!ban @user <reason>` — Ban user\n"
             "`!unban <user_id> <reason>` — Unban user\n"
-            "`!timeout @user <minutes> <reason>` — Timeout user\n"
-            "`!untimeout @user <reason>` — Remove timeout\n"
-            "`!uto @user <reason>` — Short alias for untimeout"
+            
+          
         ),
         inline=False
     )
