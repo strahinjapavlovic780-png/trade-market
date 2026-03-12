@@ -1682,80 +1682,67 @@ async def unban(ctx, user_id: int, *, reason="No reason provided"):
     if log:
         await log.send(embed=embed)
 
-
 @bot.command()
 async def timeout(ctx, member: discord.Member, minutes: int, *, reason="No reason provided"):
+
     if not has_any_role(ctx.author, STAFF_ROLE_ID):
         return await ctx.send("❌ Only Staff can use this command.")
 
-    if not is_owner_bypass(ctx.author):
-        allowed, remaining = check_command_cooldown(ctx.author.id, "timeout", 300)
-        if not allowed:
-            return await ctx.send(f"❌ Cooldown active. Try again in **{remaining}s**.")
+    if minutes <= 0:
+        return await ctx.send("❌ Please provide a valid time.")
 
     until = discord.utils.utcnow() + timedelta(minutes=minutes)
 
-    action_time = discord.utils.utcnow()
+    try:
+        await member.timeout(until, reason=reason)
+    except discord.Forbidden:
+        return await ctx.send("❌ I don't have permission to timeout this user.")
+    except Exception as e:
+        return await ctx.send(f"❌ Error: {e}")
 
     embed = discord.Embed(
         title="💜 Trade Market | User Timed Out",
         description=(
-            "# ⏳ Timeout Executed\n\n"
             f"**User:** {member.mention}\n"
-            f"**Username:** {member}\n"
-            f"**User ID:** {member.id}\n"
             f"**Duration:** {minutes} minutes\n"
             f"**Moderator:** {ctx.author.mention}\n"
-            f"**Reason:** {reason}\n"
-            f"**Account Created:** <t:{int(member.created_at.timestamp())}:F>\n"
-            f"**Action Time:** <t:{int(action_time.timestamp())}:F>"
+            f"**Reason:** {reason}"
         ),
         color=PURPLE
     )
 
     embed.set_thumbnail(url=member.display_avatar.url)
-    embed.set_footer(text="Trade Market | Moderation System")
-
-    await member.edit(timed_out_until=until, reason=f"{reason} | By: {ctx.author}")
 
     await ctx.send(embed=embed)
 
     log = await get_log_channel(ctx.guild)
     if log:
         await log.send(embed=embed)
-
-
+        
 @bot.command(aliases=["uto"])
 async def untimeout(ctx, member: discord.Member, *, reason="No reason provided"):
+
     if not has_any_role(ctx.author, STAFF_ROLE_ID):
         return await ctx.send("❌ Only Staff can use this command.")
 
-    if not is_owner_bypass(ctx.author):
-        allowed, remaining = check_command_cooldown(ctx.author.id, "untimeout", 300)
-        if not allowed:
-            return await ctx.send(f"❌ Cooldown active. Try again in **{remaining}s**.")
-
-    action_time = discord.utils.utcnow()
+    try:
+        await member.timeout(None, reason=reason)
+    except discord.Forbidden:
+        return await ctx.send("❌ I don't have permission to remove timeout.")
+    except Exception as e:
+        return await ctx.send(f"❌ Error: {e}")
 
     embed = discord.Embed(
         title="💜 Trade Market | Timeout Removed",
         description=(
-            "# 🔓 Timeout Removed\n\n"
             f"**User:** {member.mention}\n"
-            f"**Username:** {member}\n"
-            f"**User ID:** {member.id}\n"
             f"**Moderator:** {ctx.author.mention}\n"
-            f"**Reason:** {reason}\n"
-            f"**Account Created:** <t:{int(member.created_at.timestamp())}:F>\n"
-            f"**Action Time:** <t:{int(action_time.timestamp())}:F>"
+            f"**Reason:** {reason}"
         ),
         color=PURPLE
     )
 
     embed.set_thumbnail(url=member.display_avatar.url)
-    embed.set_footer(text="Trade Market | Moderation System")
-
-    await member.edit(timed_out_until=None, reason=f"{reason} | By: {ctx.author}")
 
     await ctx.send(embed=embed)
 
