@@ -622,6 +622,7 @@ async def help(ctx):
         name="ℹ️ Server Info",
         value="""
 `!about` — About the server 💜  
+`!tos` — Server TOS 💜
 `!rules` — Server rules 📜  
 `!mmtos` — Middleman Terms of Service 🛡️  
 `!value` — Official Value List 🎮  
@@ -1335,7 +1336,42 @@ Thank you for your interest in helping make **Trade Market** a better and safer 
     embed.set_footer(text=f"{ctx.guild.name} | Official Staff Application")
     await ctx.send(embed=embed)
                                                                                                            
-                                                
+@bot.command(name="tos")
+async def tos(ctx):
+    embed = discord.Embed(
+        title="💜 Trade Market | Server TOS",
+        description=(
+            "# TRADE MARKET\n"
+            "## Server Terms of Service\n\n"
+
+            "### Welcome\n"
+            "Welcome to **Trade Market**. Please read the following terms before using the server.\n\n"
+
+            "### Community Rules\n"
+            "• Treat every member with **respect**.\n"
+            "• **No spam** or flooding channels.\n"
+            "• **No harassment, hate speech, or toxicity**.\n"
+            "• Follow all **Discord guidelines**.\n\n"
+
+            "### Trading Rules\n"
+            "• Be **honest and fair** when trading.\n"
+            "• **Scamming is strictly forbidden**.\n"
+            "• Report suspicious activity to **staff immediately**.\n\n"
+
+            "### Important Notice\n"
+            "By remaining in this server you **agree to follow all rules and terms**.\n"
+            "Breaking these rules may result in **warnings, mutes, kicks, or bans**.\n\n"
+
+            "### Enjoy the Server\n"
+            "Trade safely, respect others, and enjoy your time in **Trade Market**."
+        ),
+        color=discord.Color.purple()
+    )
+
+    embed.set_footer(text="Trade Market Administration")
+
+    await ctx.send(embed=embed)
+                                                                                                
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user}")
