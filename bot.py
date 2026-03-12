@@ -1202,7 +1202,7 @@ async def mmtos(ctx):
     embed.set_footer(text="Trade Market | Official Middleman Terms")
     await ctx.send(embed=embed)
 
-FOUNDER_ROLE_ID = 123456789012345678  # <-- stavi ovde tvoj Founder role ID
+FOUNDER_ROLE_ID = 1465697938155110411
 
 @bot.command()
 async def value(ctx):
