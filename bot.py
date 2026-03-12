@@ -70,8 +70,8 @@ class MMView(discord.ui.View):
         super().__init__(timeout=None)
         self.add_item(MMSelect())
 
-class MMModal(discord.ui.Modal):
 
+class MMModal(discord.ui.Modal):
     def __init__(self, trade_type):
         super().__init__(title="Middleman Ticket")
 
@@ -99,7 +99,6 @@ class MMModal(discord.ui.Modal):
         self.add_item(self.agreement)
 
     async def on_submit(self, interaction: discord.Interaction):
-
         guild = interaction.guild
         global TICKET_CATEGORY_ID
 
@@ -121,14 +120,16 @@ class MMModal(discord.ui.Modal):
             guild.default_role: discord.PermissionOverwrite(view_channel=False),
             interaction.user: discord.PermissionOverwrite(
                 view_channel=True,
-                send_messages=True
+                send_messages=True,
+                read_message_history=True
             ),
         }
 
         if mm_role:
             overwrites[mm_role] = discord.PermissionOverwrite(
                 view_channel=True,
-                send_messages=True
+                send_messages=True,
+                read_message_history=True
             )
 
         channel = await guild.create_text_channel(
@@ -138,44 +139,39 @@ class MMModal(discord.ui.Modal):
         )
 
         ticket_embed = discord.Embed(
-            title="New Middleman Ticket",
-            color=discord.Color.blue()
+            title="💜 Trade Market | New Middleman Ticket",
+            description=(
+                "# New Ticket Created\n"
+                "A new **middleman request** has been submitted.\n\n"
+                "## Ticket Information\n"
+                f"**Trade Type:** {self.trade_type}\n"
+                f"**Other User:** {self.other_user.value}\n"
+                f"**Agreement:** {self.agreement.value}\n\n"
+                "## Trade Details\n"
+                f"{self.trade_details.value}\n\n"
+                "## Status\n"
+                "**Waiting for a Middleman to claim this ticket.**"
+            ),
+            color=discord.Color.purple()
         )
 
-        ticket_embed.add_field(
-            name="Trade Type",
-            value=self.trade_type,
-            inline=False
-        )
+        ticket_embed.set_footer(text="Trade Market Administration")
 
-        ticket_embed.add_field(
-            name="Other User",
-            value=self.other_user.value,
-            inline=False
-        )
-
-        ticket_embed.add_field(
-            name="Trade Details",
-            value=self.trade_details.value,
-            inline=False
-        )
-
-        ticket_embed.add_field(
-            name="Agreement",
-            value=self.agreement.value,
-            inline=False
-        )
+        mention_text = interaction.user.mention
+        if mm_role:
+            mention_text = f"{interaction.user.mention} {mm_role.mention}"
 
         await channel.send(
-            content=interaction.user.mention,
+            content=mention_text,
             embed=ticket_embed,
             view=TicketButtons(interaction.user)
         )
 
         await interaction.response.send_message(
-            f"Your ticket has been created: {channel.mention}",
+            f"✅ Your ticket has been created: {channel.mention}",
             ephemeral=True
         )
+
 
 # ================= BUTTONS =================
 
@@ -187,7 +183,6 @@ class TicketButtons(discord.ui.View):
 
     @discord.ui.button(label="✔️Claim", style=discord.ButtonStyle.green)
     async def claim(self, interaction: discord.Interaction, button: discord.ui.Button):
-
         if MM_ROLE_ID not in [role.id for role in interaction.user.roles]:
             return await interaction.response.send_message(
                 "Only MM team can claim tickets.",
@@ -203,14 +198,49 @@ class TicketButtons(discord.ui.View):
         self.claimer = interaction.user
         button.disabled = True
 
-        await interaction.response.edit_message(view=self)
-        await interaction.channel.send(
-            f"🔒 {interaction.user.mention} claimed this ticket."
+        guild = interaction.guild
+        channel = interaction.channel
+        mm_role = guild.get_role(MM_ROLE_ID)
+
+        # Sakrij ticket od MM role
+        if mm_role:
+            await channel.set_permissions(mm_role, view_channel=False)
+
+        # Kreator ticketa i dalje vidi ticket
+        await channel.set_permissions(
+            self.creator,
+            view_channel=True,
+            send_messages=True,
+            read_message_history=True
         )
+
+        # MM koji je claimovao vidi ticket
+        await channel.set_permissions(
+            interaction.user,
+            view_channel=True,
+            send_messages=True,
+            read_message_history=True
+        )
+
+        claimed_embed = discord.Embed(
+            title="💜 Trade Market | Ticket Claimed",
+            description=(
+                "# Ticket Claimed\n"
+                f"This ticket has been claimed by {interaction.user.mention}.\n\n"
+                "## Status\n"
+                f"{self.creator.mention} and {interaction.user.mention} can now access this ticket.\n"
+                "**Other middlemen can no longer view it.**"
+            ),
+            color=discord.Color.purple()
+        )
+
+        claimed_embed.set_footer(text="Trade Market Administration")
+
+        await interaction.response.edit_message(view=self)
+        await channel.send(embed=claimed_embed)
 
     @discord.ui.button(label="➕Add User", style=discord.ButtonStyle.blurple)
     async def add_user_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-
         if MM_ROLE_ID not in [role.id for role in interaction.user.roles]:
             return await interaction.response.send_message(
                 "Only MM team can use this.",
@@ -224,7 +254,6 @@ class TicketButtons(discord.ui.View):
 
     @discord.ui.button(label="Remove User", style=discord.ButtonStyle.gray)
     async def remove_user_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-
         if MM_ROLE_ID not in [role.id for role in interaction.user.roles]:
             return await interaction.response.send_message(
                 "Only MM team can use this.",
@@ -238,7 +267,6 @@ class TicketButtons(discord.ui.View):
 
     @discord.ui.button(label="Close", style=discord.ButtonStyle.red)
     async def close(self, interaction: discord.Interaction, button: discord.ui.Button):
-
         if MM_ROLE_ID not in [role.id for role in interaction.user.roles]:
             return await interaction.response.send_message(
                 "Only MM team can close tickets.",
