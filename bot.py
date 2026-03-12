@@ -627,7 +627,6 @@ async def help(ctx):
             "`!add @user` – Add user to ticket\n"
             "`!remove @user` - Remove user from ticket\n"
             "`!unclaim` - Unclaim the ticket"
-            
         ),
         inline=False
     )
@@ -690,9 +689,9 @@ async def help(ctx):
         inline=False
     )
 
-embed.add_field(
-    name="🛠 Moderation Commands",
-    value="""
+    embed.add_field(
+        name="🛠 Moderation Commands",
+        value="""
 `!purge <amount>` — Delete messages (Lead)
 
 `!warn @user <reason>` — Warn a user (Lead)  
@@ -714,10 +713,13 @@ embed.add_field(
 `!demote @user` — Demote member (Vice President)  
 `!role @user @role` — Give role (Vice President)
 """,
-    inline=False
-)
+        inline=False
+    )
 
-embed.set_footer(text="Trade Market | Official")
+    embed.set_footer(text="Trade Market | Official")
+
+    await ctx.send(embed=embed)
+
 
 await ctx.send(embed=embed)
 
