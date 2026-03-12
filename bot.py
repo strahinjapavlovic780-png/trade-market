@@ -1682,23 +1682,21 @@ async def unban(ctx, user_id: int, *, reason="No reason provided"):
     if log:
         await log.send(embed=embed)
 
-@bot.command()
+@bot.command(aliases=["to"])
 async def timeout(ctx, member: discord.Member, minutes: int, *, reason="No reason provided"):
 
-    if not has_any_role(ctx.author, STAFF_ROLE_ID):
+    if STAFF_ROLE_ID not in [role.id for role in ctx.author.roles]:
         return await ctx.send("❌ Only Staff can use this command.")
 
     if minutes <= 0:
-        return await ctx.send("❌ Please provide a valid time.")
+        return await ctx.send("❌ Time must be greater than 0.")
 
     until = discord.utils.utcnow() + timedelta(minutes=minutes)
 
     try:
-        await member.timeout(until, reason=reason)
+        await member.edit(timed_out_until=until, reason=reason)
     except discord.Forbidden:
         return await ctx.send("❌ I don't have permission to timeout this user.")
-    except Exception as e:
-        return await ctx.send(f"❌ Error: {e}")
 
     embed = discord.Embed(
         title="💜 Trade Market | User Timed Out",
@@ -1722,15 +1720,13 @@ async def timeout(ctx, member: discord.Member, minutes: int, *, reason="No reaso
 @bot.command(aliases=["uto"])
 async def untimeout(ctx, member: discord.Member, *, reason="No reason provided"):
 
-    if not has_any_role(ctx.author, STAFF_ROLE_ID):
+    if STAFF_ROLE_ID not in [role.id for role in ctx.author.roles]:
         return await ctx.send("❌ Only Staff can use this command.")
 
     try:
-        await member.timeout(None, reason=reason)
+        await member.edit(timed_out_until=None, reason=reason)
     except discord.Forbidden:
         return await ctx.send("❌ I don't have permission to remove timeout.")
-    except Exception as e:
-        return await ctx.send(f"❌ Error: {e}")
 
     embed = discord.Embed(
         title="💜 Trade Market | Timeout Removed",
