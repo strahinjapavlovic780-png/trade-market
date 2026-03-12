@@ -4,18 +4,22 @@ import os
 import json
 
 VOUCH_FILE = "vouches.json"
+PURPLE = discord.Color.purple()
 
 if not os.path.exists(VOUCH_FILE):
     with open(VOUCH_FILE, "w") as f:
         json.dump({}, f)
 
+
 def load_vouches():
     with open(VOUCH_FILE, "r") as f:
         return json.load(f)
 
+
 def save_vouches(data):
     with open(VOUCH_FILE, "w") as f:
         json.dump(data, f, indent=4)
+
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -23,7 +27,6 @@ intents.guilds = True
 intents.members = True
 
 bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
-
 
 MM_ROLE_ID = 1465699152653455546
 MEMBER_ROLE_ID = 1465699188628262963
@@ -35,6 +38,12 @@ STAFF_ROLE_ID = 1465698968439886030
 LEAD_ROLE_ID = 1465698723479687387
 EXECUTIVE_ROLE_ID = 1465698169672175676
 VICE_PRESIDENT_ROLE_ID = 1465697969851601050
+OWNER_ROLE_ID = 1465695641320685730
+
+LOG_CHANNEL_NAME = "mod-logs"
+COOLDOWN = 300
+warn_data = {}
+
 
 def is_mm():
     async def predicate(ctx):
@@ -43,6 +52,36 @@ def is_mm():
             return False
         return True
     return commands.check(predicate)
+
+
+def has_role(ctx, role_id):
+    return any(role.id == role_id for role in ctx.author.roles)
+
+
+def is_owner(ctx):
+    return any(role.id == OWNER_ROLE_ID for role in ctx.author.roles)
+
+
+def higher_role(ctx, member):
+    return member.top_role >= ctx.author.top_role
+
+
+async def get_log_channel(guild):
+    channel = discord.utils.get(guild.text_channels, name=LOG_CHANNEL_NAME)
+
+    if channel is None:
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(view_channel=False),
+            guild.get_role(EXECUTIVE_ROLE_ID): discord.PermissionOverwrite(view_channel=True)
+        }
+
+        channel = await guild.create_text_channel(
+            LOG_CHANNEL_NAME,
+            overwrites=overwrites
+        )
+
+    return channel
+
 
 # ================= PANEL SELECT =================
 
@@ -102,14 +141,12 @@ class MMModal(discord.ui.Modal):
         guild = interaction.guild
         global TICKET_CATEGORY_ID
 
-        # Ako category nije setovan - napravi novu
         if TICKET_CATEGORY_ID is None:
             category = await guild.create_category("══「 🎫 TICKETS 」══")
             TICKET_CATEGORY_ID = category.id
         else:
             category = guild.get_channel(TICKET_CATEGORY_ID)
 
-            # Ako ID postoji ali je category obrisana
             if category is None:
                 category = await guild.create_category("══「 🎫 TICKETS 」══")
                 TICKET_CATEGORY_ID = category.id
@@ -152,10 +189,10 @@ class MMModal(discord.ui.Modal):
                 "## Status\n"
                 "**Waiting for a Middleman to claim this ticket.**"
             ),
-            color=discord.Color.purple()
+            color=PURPLE
         )
 
-        ticket_embed.set_footer(text="Trade Market Administration")
+        ticket_embed.set_footer(text="Trade Market | Ticket System")
 
         mention_text = interaction.user.mention
         if mm_role:
@@ -202,11 +239,9 @@ class TicketButtons(discord.ui.View):
         channel = interaction.channel
         mm_role = guild.get_role(MM_ROLE_ID)
 
-        # Sakrij ticket od MM role
         if mm_role:
             await channel.set_permissions(mm_role, view_channel=False)
 
-        # Kreator ticketa i dalje vidi ticket
         await channel.set_permissions(
             self.creator,
             view_channel=True,
@@ -214,7 +249,6 @@ class TicketButtons(discord.ui.View):
             read_message_history=True
         )
 
-        # MM koji je claimovao vidi ticket
         await channel.set_permissions(
             interaction.user,
             view_channel=True,
@@ -231,10 +265,10 @@ class TicketButtons(discord.ui.View):
                 f"{self.creator.mention} and {interaction.user.mention} can now access this ticket.\n"
                 "**Other middlemen can no longer view it.**"
             ),
-            color=discord.Color.purple()
+            color=PURPLE
         )
 
-        claimed_embed.set_footer(text="Trade Market Administration")
+        claimed_embed.set_footer(text="Trade Market | Ticket System")
 
         await interaction.response.edit_message(view=self)
         await channel.send(embed=claimed_embed)
@@ -276,116 +310,122 @@ class TicketButtons(discord.ui.View):
         await interaction.response.send_message("Closing ticket...")
         await interaction.channel.delete()
 
+
 # ================= COMMANDS =================
 
 @bot.command()
 async def add(ctx, member: discord.Member):
-
-    # Provera da li je ticket kanal
     if ctx.channel.category is None or ctx.channel.category.name != "══「 🎫 TICKETS 」══":
         return await ctx.send("❌ This command can only be used inside ticket channels.")
 
-    # Provera MM role
     if MM_ROLE_ID not in [role.id for role in ctx.author.roles]:
         return await ctx.send("❌ Only MM team can use this command.")
 
     await ctx.channel.set_permissions(member, view_channel=True, send_messages=True)
+
     embed = discord.Embed(
-        title="✅ User Successfully Added",
-        description=f"{member.mention} has been added to the ticket and can now participate in the trade.",
-        color=discord.Color.purple()
+        title="💜 Trade Market | User Added",
+        description=(
+            "# ✅ User Successfully Added\n\n"
+            f"{member.mention} has been added to the ticket and can now participate in the trade."
+        ),
+        color=PURPLE
     )
+    embed.set_footer(text="Trade Market | Ticket System")
 
     await ctx.send(embed=embed)
-    
-    
+
+
 @bot.command()
 async def remove(ctx, member: discord.Member):
-
-    # Provera da li je ticket kanal
     if ctx.channel.category is None or ctx.channel.category.name != "══「 🎫 TICKETS 」══":
         return await ctx.send("❌ This command can only be used inside ticket channels.")
 
-    # Provera MM role
     if MM_ROLE_ID not in [role.id for role in ctx.author.roles]:
         return await ctx.send("❌ Only MM team can use this command.")
 
     await ctx.channel.set_permissions(member, overwrite=None)
 
     embed = discord.Embed(
-        title="❌ User Removed",
-        description=f"{member.mention} has been removed from the ticket.",
-        color=discord.Color.purple()
+        title="💜 Trade Market | User Removed",
+        description=(
+            "# ❌ User Removed\n\n"
+            f"{member.mention} has been removed from the ticket."
+        ),
+        color=PURPLE
     )
+    embed.set_footer(text="Trade Market | Ticket System")
 
     await ctx.send(embed=embed)
 
 
 @bot.command()
 async def claim(ctx):
-
-    # Provera da li je ticket kanal
     if ctx.channel.category is None or ctx.channel.category.name != "══「 🎫 TICKETS 」══":
         return await ctx.send("❌ This command can only be used inside ticket channels.")
 
-    # Provera MM role
     if MM_ROLE_ID not in [role.id for role in ctx.author.roles]:
         return await ctx.send("❌ Only MM team can claim tickets.")
 
     embed = discord.Embed(
-        title="✅ Ticket Claimed",
-        description=f"{ctx.author.mention} has claimed this ticket!\n\n"
-                    f"Ticket is now private.",
-        color=discord.Color.purple()
-    ) 
+        title="💜 Trade Market | Ticket Claimed",
+        description=(
+            "# ✅ Ticket Claimed\n\n"
+            f"{ctx.author.mention} has claimed this ticket.\n\n"
+            "## Status\n"
+            "**Ticket is now private.**"
+        ),
+        color=PURPLE
+    )
+    embed.set_footer(text="Trade Market | Ticket System")
 
     await ctx.channel.send(embed=embed)
 
 
 @bot.command()
 async def close(ctx):
-
-    # Provera da li je kanal u MM Tickets kategoriji
     if ctx.channel.category is None or ctx.channel.category.name != "══「 🎫 TICKETS 」══":
         return await ctx.send("❌ This command can only be used inside ticket channels.")
 
-    # Provera MM role
     if MM_ROLE_ID not in [role.id for role in ctx.author.roles]:
         return await ctx.send("❌ Only MM team can close tickets.")
 
     await ctx.send("Closing ticket...")
     await ctx.channel.delete()
-    
+
+
 @bot.command()
 async def unclaim(ctx):
-
-    # Provera da li je ticket kanal
     if ctx.channel.category is None or ctx.channel.category.name != "══「 🎫 TICKETS 」══":
         return await ctx.send("❌ This command can only be used inside ticket channels.")
 
-    # Provera MM role
     if MM_ROLE_ID not in [role.id for role in ctx.author.roles]:
         return await ctx.send("❌ Only MM team can unclaim tickets.")
 
     embed = discord.Embed(
-        title="🔓 Ticket Unclaimed",
-        description=f"{ctx.author.mention} has unclaimed this ticket.\n\n"
-                    f"Another MM can now claim it.",
-        color=discord.Color.purple()
+        title="💜 Trade Market | Ticket Unclaimed",
+        description=(
+            "# 🔓 Ticket Unclaimed\n\n"
+            f"{ctx.author.mention} has unclaimed this ticket.\n\n"
+            "## Status\n"
+            "**Another MM can now claim it.**"
+        ),
+        color=PURPLE
     )
+    embed.set_footer(text="Trade Market | Ticket System")
 
     await ctx.channel.send(embed=embed)
+
 
 # ================= PANEL COMMAND =================
 
 @bot.command()
 async def panel(ctx):
-
     if FOUNDER_ROLE_ID not in [role.id for role in ctx.author.roles]:
         return await ctx.send("❌ Only Founder can use this command.")
 
     embed = discord.Embed(
-        title="Middleman Service",
+        title="💜 Trade Market | Middleman Service",
         description=(
             "Welcome to our middleman service centre.\n\n"
             "At **Trade Market**, we provide a safe and secure way to exchange your goods, "
@@ -402,8 +442,9 @@ async def panel(ctx):
             "• Wait for a staff member.\n\n"
             "**Trade Market • Trusted Middleman Service**"
         ),
-        color=discord.Color.purple()
+        color=PURPLE
     )
+    embed.set_footer(text="Trade Market | Official Middleman System")
 
     await ctx.send(embed=embed, view=MMView())
 
@@ -412,26 +453,21 @@ async def panel(ctx):
 
 @bot.command()
 async def howmmworks(ctx):
-
     embed = discord.Embed(
-        title="How a Middleman Works",
+        title="💜 Trade Market | How a Middleman Works",
         description=(
             "🔐 **How Trade Market's Middleman Service Works**\n\n"
-
-            "Welcome to **Eneba's Middleman Service**, where your trades are handled with "
+            "Welcome to **Trade Market's Middleman Service**, where your trades are handled with "
             "**maximum security, transparency, and professionalism**.\n\n"
-
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             "🛡️ **Why Use a Middleman?**\n"
             "A middleman protects both parties during a trade. Instead of trusting a stranger, "
             "both users trust our verified MM team.\n\n"
-
             "With our service:\n"
             "• 🚫 No scams\n"
             "• 🔒 No risk of chargebacks\n"
             "• 🤝 Fair trade guarantee\n"
             "• 📜 Proof and documentation of the deal\n\n"
-
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             "📩 **Step-By-Step Process**\n"
             "1️⃣ Both users agree on the trade terms.\n"
@@ -441,29 +477,26 @@ async def howmmworks(ctx):
             "5️⃣ The buyer sends the payment/item to the MM.\n"
             "6️⃣ After confirmation, the seller delivers their part.\n"
             "7️⃣ Once both sides confirm, the MM safely releases the assets.\n\n"
-
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             "🌟 **Trade Market's Middleman Service Guarantee**\n"
             "We ensure a **secure, neutral, and protected environment** for every trade.\n"
             "Our reputation is built on **trust, safety, and successful transactions**.\n\n"
-
             "💜 Trade safely. Trade smart. Trade with confidence."
         ),
-        color=discord.Color.purple()
+        color=PURPLE
     )
 
     embed.set_footer(text="Trade Market | Official Middleman System")
-
     await ctx.send(embed=embed)
+
 
 # ================= POLICY =================
 
 @bot.command()
 async def policy(ctx):
-
     embed = discord.Embed(
-        title="Middleman Accountability & Compensation Policy",
-        color=discord.Color.purple()
+        title="💜 Trade Market | Middleman Accountability & Compensation Policy",
+        color=PURPLE
     )
 
     embed.add_field(
@@ -497,14 +530,12 @@ async def policy(ctx):
     )
 
     embed.set_footer(text="Trade Market | Protection Guaranteed")
-
     await ctx.send(embed=embed)
 
 
 # ================= FEE SYSTEM =================
 
 class CustomFeeModal(discord.ui.Modal, title="Custom Fee Split"):
-
     split = discord.ui.TextInput(
         label="Enter split (example: 60-40)",
         placeholder="Example: 70-30",
@@ -512,7 +543,6 @@ class CustomFeeModal(discord.ui.Modal, title="Custom Fee Split"):
     )
 
     async def on_submit(self, interaction: discord.Interaction):
-
         try:
             parts = self.split.value.replace(" ", "").split("-")
             p1 = int(parts[0])
@@ -533,16 +563,18 @@ class CustomFeeModal(discord.ui.Modal, title="Custom Fee Split"):
             return
 
         embed = discord.Embed(
-            title=f"Middleman Fee Agreement – {p1}/{p2} Split",
+            title=f"💜 Trade Market | Fee Agreement – {p1}/{p2} Split",
             description=(
-                "Both traders have agreed to split the middleman fee equally.\n\n"
+                "# Middleman Fee Agreement\n\n"
+                "Both traders have agreed to split the middleman fee.\n\n"
                 f"**User 1 will pay {p1}% of the fee.**\n"
                 f"**User 2 will pay {p2}% of the fee.**\n\n"
                 "This ensures fairness and equal responsibility between both parties.\n\n"
                 "Once payment is completed, the middleman will proceed with the secured transaction."
             ),
-            color=discord.Color.blue()
+            color=PURPLE
         )
+        embed.set_footer(text="Trade Market | Fee System")
 
         await interaction.response.send_message(embed=embed)
 
@@ -554,33 +586,35 @@ class FeeView(discord.ui.View):
 
     @discord.ui.button(label="50% / 50%", style=discord.ButtonStyle.primary)
     async def split_fee(self, interaction: discord.Interaction, button: discord.ui.Button):
-
         embed = discord.Embed(
-            title="Middleman Fee Agreement – 50/50 Split",
+            title="💜 Trade Market | Fee Agreement – 50/50 Split",
             description=(
+                "# Middleman Fee Agreement\n\n"
                 "Both traders have agreed to split the middleman fee equally.\n\n"
                 "**Both users will pay 50% of the fee each.**\n\n"
                 "This ensures fairness and equal responsibility between both parties.\n\n"
                 "Once payment is completed, the middleman will proceed with the secured transaction."
             ),
-            color=discord.Color.blue()
+            color=PURPLE
         )
+        embed.set_footer(text="Trade Market | Fee System")
 
         await interaction.response.send_message(embed=embed)
 
     @discord.ui.button(label="100% One User Pays", style=discord.ButtonStyle.red)
     async def full_fee(self, interaction: discord.Interaction, button: discord.ui.Button):
-
         embed = discord.Embed(
-            title="Middleman Fee Agreement – Full Payment",
+            title="💜 Trade Market | Fee Agreement – Full Payment",
             description=(
+                "# Middleman Fee Agreement\n\n"
                 f"{interaction.user.mention} has agreed to cover the full middleman fee.\n\n"
                 f"**{interaction.user.mention} will pay 100% of the fees to the middleman.**\n\n"
                 "The second trader is not responsible for any service fee in this transaction.\n\n"
                 "Once the fee is confirmed, the trade will proceed under full protection."
             ),
-            color=discord.Color.blue()
+            color=PURPLE
         )
+        embed.set_footer(text="Trade Market | Fee System")
 
         await interaction.response.send_message(embed=embed)
 
@@ -592,7 +626,7 @@ class FeeView(discord.ui.View):
 @bot.command()
 async def fee(ctx):
     embed = discord.Embed(
-        title="Middleman Service Fee Confirmation",
+        title="💜 Trade Market | Middleman Service Fee Confirmation",
         description=(
             "To ensure transparency and fairness, all middleman transactions may include a service fee.\n\n"
             "Please choose how the fee will be handled for this trade:\n\n"
@@ -601,8 +635,9 @@ async def fee(ctx):
             "🔹 **Custom Split** – Choose your own percentage distribution.\n\n"
             "Click one of the buttons below to confirm how the fee will be paid."
         ),
-        color=discord.Color.purple()
+        color=PURPLE
     )
+    embed.set_footer(text="Trade Market | Fee System")
 
     await ctx.send(embed=embed, view=FeeView(ctx.author))
 
@@ -612,7 +647,7 @@ async def fee(ctx):
 @bot.command()
 async def confirm(ctx, user1: discord.Member, user2: discord.Member):
     embed = discord.Embed(
-        title="Official Trade Confirmation",
+        title="💜 Trade Market | Official Trade Confirmation",
         description=(
             "This trade has been officially confirmed under the supervision of our Middleman Team.\n\n"
             "Both parties listed below have agreed to the full trade terms, conditions, "
@@ -624,7 +659,7 @@ async def confirm(ctx, user1: discord.Member, user2: discord.Member):
             "The transaction is now protected and logged under our official policy system.\n\n"
             "**Trade Protection Status: ACTIVE ✅**"
         ),
-        color=discord.Color.purple()
+        color=PURPLE
     )
 
     embed.add_field(name="Trader 1", value=user1.mention, inline=False)
@@ -633,35 +668,35 @@ async def confirm(ctx, user1: discord.Member, user2: discord.Member):
 
     await ctx.send(embed=embed)
 
+
+# ================= HELP =================
+
 @bot.command()
 async def help(ctx):
-    # 🔒 Only Founder can use this command
     if FOUNDER_ROLE_ID not in [role.id for role in ctx.author.roles]:
         return await ctx.send("❌ Only the Founder can use this command.")
 
     embed = discord.Embed(
-        title=f"📘 {ctx.guild.name}'s Bot Commands",
+        title=f"💜 {ctx.guild.name} | Bot Commands",
         description="Here is a list of all available commands:",
-        color=discord.Color.purple()
+        color=PURPLE
     )
 
-    # ℹ️ Server Info
     embed.add_field(
         name="ℹ️ Server Info",
-        value="""
-`!about` — About the server 💜  
-`!tos` — Server TOS 💜
-`!rules` — Server rules 📜  
-`!support` — Server Support 🆘
-`!mmtos` — Middleman Terms of Service 🛡️  
-`!value` — Official Value List 🎮  
-`!marketrules` — Marketplace Rules 🛒  
-`!staffapp` — Staff Application 📝
-""",
+        value=(
+            "`!about` — About the server 💜\n"
+            "`!tos` — Server TOS 💜\n"
+            "`!rules` — Server rules 📜\n"
+            "`!support` — Server Support 🆘\n"
+            "`!mmtos` — Middleman Terms of Service 🛡️\n"
+            "`!value` — Official Value List 🎮\n"
+            "`!marketrules` — Marketplace Rules 🛒\n"
+            "`!staffapp` — Staff Application 📝"
+        ),
         inline=False
     )
 
-    # 🎟 Ticket System
     embed.add_field(
         name="🎟 Ticket System",
         value=(
@@ -674,7 +709,6 @@ async def help(ctx):
         inline=False
     )
 
-    # 🔒 Claim System
     embed.add_field(
         name="🔒 Claim System",
         value=(
@@ -685,25 +719,23 @@ async def help(ctx):
         inline=False
     )
 
-    # 💰 Fee System
     embed.add_field(
         name="💰 Fee System",
         value=(
             "`!fee` – Sends fee agreement\n"
             "`50/50 Button` – Split fee\n"
-            "`100% Button` – One user pays full fee"
+            "`100% Button` – One user pays full fee\n"
+            "`Custom Split` – Custom fee split"
         ),
         inline=False
     )
 
-    # ✅ Trade Confirmation
     embed.add_field(
         name="✅ Trade Confirmation",
         value="`!confirm @user1 @user2` – Confirms trade",
         inline=False
     )
 
-    # ℹ️ Information
     embed.add_field(
         name="ℹ️ Information",
         value=(
@@ -713,7 +745,6 @@ async def help(ctx):
         inline=False
     )
 
-    # ⭐ Vouch Commands
     embed.add_field(
         name="⭐ Vouch Commands",
         value=(
@@ -725,49 +756,32 @@ async def help(ctx):
         inline=False
     )
 
-    # ⚖️ Mercy
     embed.add_field(
         name="⚖️ Mercy",
         value="`!mercy @user` – Offer mercy to a user (MM ONLY)",
         inline=False
     )
 
-    # 🛠 Moderation Commands
     embed.add_field(
         name="🛠 Moderation Commands",
-        value="""
-`!purge <amount>` — Delete messages (Lead)  
-`!warn @user <reason>` — Warn a user (Lead)  
-`!warns @user` — Check warns (Lead)  
-`!unwarn @user` — Remove warn (Lead)
-""",
+        value=(
+            "`!purge <amount>` — Delete messages (Lead)\n"
+            "`!warn @user <reason>` — Warn a user (Lead)\n"
+            "`!warns @user` — Check warns (Lead)\n"
+            "`!unwarn @user` — Remove warn (Lead)"
+        ),
         inline=False
     )
 
-    # Footer sa imenom servera
     embed.set_footer(text=f"{ctx.guild.name} | Official Bot")
-
     await ctx.send(embed=embed)
 
 
-vouches = {}
+# ================= VOUCHES =================
 
-def is_mm():
-    async def predicate(ctx):
-        if MM_ROLE_ID not in [role.id for role in ctx.author.roles]:
-            await ctx.send("❌ You are not allowed to use this command.")
-            return False
-        return True
-    return commands.check(predicate)
-
-
-# ------------------------
-# !addvouch @user <amount> (MM ONLY)
-# ------------------------
 @bot.command()
 @is_mm()
 async def addvouch(ctx, member: discord.Member, amount: int):
-
     if amount <= 0:
         return await ctx.send("❌ Please provide a valid positive number.")
 
@@ -785,7 +799,7 @@ async def addvouch(ctx, member: discord.Member, amount: int):
             "## Current Total\n"
             f"They now have **{vouches_data[user_id]}** vouches."
         ),
-        color=discord.Color.purple()
+        color=PURPLE
     )
 
     embed.set_thumbnail(url=member.display_avatar.url)
@@ -794,13 +808,9 @@ async def addvouch(ctx, member: discord.Member, amount: int):
     await ctx.send(embed=embed)
 
 
-# ------------------------
-# !removevouch @user (MM ONLY)
-# ------------------------
 @bot.command()
 @is_mm()
 async def removevouch(ctx, member: discord.Member):
-
     vouches_data = load_vouches()
     user_id = str(member.id)
 
@@ -815,7 +825,7 @@ async def removevouch(ctx, member: discord.Member):
             "## Status\n"
             "All previous vouches have been removed."
         ),
-        color=discord.Color.purple()
+        color=PURPLE
     )
 
     embed.set_thumbnail(url=member.display_avatar.url)
@@ -824,13 +834,9 @@ async def removevouch(ctx, member: discord.Member):
     await ctx.send(embed=embed)
 
 
-# ------------------------
-# !vouches [@user] (MM ONLY)
-# ------------------------
 @bot.command()
 @is_mm()
 async def vouches(ctx, member: discord.Member = None):
-
     if member is None:
         member = ctx.author
 
@@ -845,7 +851,7 @@ async def vouches(ctx, member: discord.Member = None):
             "## Reputation Status\n"
             "Vouches represent successful trades and trust."
         ),
-        color=discord.Color.purple()
+        color=PURPLE
     )
 
     embed.set_thumbnail(url=member.display_avatar.url)
@@ -854,12 +860,8 @@ async def vouches(ctx, member: discord.Member = None):
     await ctx.send(embed=embed)
 
 
-# ------------------------
-# !vouch @user (EVERYONE)
-# ------------------------
 @bot.command()
 async def vouch(ctx, member: discord.Member):
-
     if member == ctx.author:
         return await ctx.send("❌ You cannot vouch for yourself.")
 
@@ -877,7 +879,7 @@ async def vouch(ctx, member: discord.Member):
             "## Current Total\n"
             f"They now have **{vouches_data[user_id]}** vouches."
         ),
-        color=discord.Color.purple()
+        color=PURPLE
     )
 
     embed.set_thumbnail(url=member.display_avatar.url)
@@ -885,7 +887,9 @@ async def vouch(ctx, member: discord.Member):
 
     await ctx.send(embed=embed)
 
- 
+
+# ================= MERCY =================
+
 class MercyView(discord.ui.View):
     def __init__(self, target: discord.Member):
         super().__init__(timeout=60)
@@ -902,7 +906,6 @@ class MercyView(discord.ui.View):
 
     @discord.ui.button(label="Accept", style=discord.ButtonStyle.green)
     async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
-
         role = interaction.guild.get_role(MERCY_ROLE_ID)
         staff_channel = interaction.guild.get_channel(STAFF_CHANNEL_ID)
 
@@ -910,6 +913,7 @@ class MercyView(discord.ui.View):
             await self.target.add_roles(role)
 
         accept_embed = discord.Embed(
+            title="Mercy Accepted",
             description=(
                 f"**{self.target.mention} has accepted the offer!**\n\n"
                 "**What now?**\n"
@@ -918,8 +922,9 @@ class MercyView(discord.ui.View):
                 "▸ Ask other staff for help if needed.\n\n"
                 "**Start earning now!**"
             ),
-            color=discord.Color.gold()
+            color=PURPLE
         )
+        accept_embed.set_footer(text="Mercy System")
 
         await interaction.channel.send(embed=accept_embed)
 
@@ -938,8 +943,8 @@ class MercyView(discord.ui.View):
 
     @discord.ui.button(label="Decline", style=discord.ButtonStyle.red)
     async def decline(self, interaction: discord.Interaction, button: discord.ui.Button):
-
         decline_embed = discord.Embed(
+            title="Mercy Declined",
             description=(
                 f"**{self.target.mention} has declined the offer!**\n\n"
                 "**What now?**\n"
@@ -947,8 +952,9 @@ class MercyView(discord.ui.View):
                 "▸ You will not receive access to the Mercy program.\n\n"
                 "**Decision recorded.**"
             ),
-            color=discord.Color.gold()
+            color=PURPLE
         )
+        decline_embed.set_footer(text="Mercy System")
 
         await interaction.channel.send(embed=decline_embed)
 
@@ -962,18 +968,16 @@ class MercyView(discord.ui.View):
 
         await interaction.message.edit(view=self)
 
+
 @bot.command()
 async def mercy(ctx, member: discord.Member):
-
     if MM_ROLE_ID not in [role.id for role in ctx.author.roles]:
         return await ctx.send("❌ Only Middleman can use this command.")
 
-    
     embed = discord.Embed(
         title="Hitting Application",
         description="""• **We regret to inform you that you have been scammed**, and we sincerely apologize for this unfortunate situation.
 
-    
 However, there is a way for you to recover your losses and potentially earn 2x or even 100x if you're active.
 
 • **What is Hitting?**
@@ -987,50 +991,14 @@ You have one minute to respond.
 
 **The decision is yours. Make it count.**
 """,
-        color=discord.Color.purple()
+        color=PURPLE
     )
-    await ctx.send(
-    embed=embed,
-    view=MercyView(member)
-)
+    embed.set_footer(text="Mercy System")
 
-COOLDOWN = 300
-OWNER_ROLE_ID = 1465695641320685730
-
-LOG_CHANNEL_NAME = "mod-logs"
-PURPLE = 0x9b59b6
-
-warn_data = {}
+    await ctx.send(embed=embed, view=MercyView(member))
 
 
-async def get_log_channel(guild):
-    channel = discord.utils.get(guild.text_channels, name=LOG_CHANNEL_NAME)
-
-    if channel is None:
-        overwrites = {
-            guild.default_role: discord.PermissionOverwrite(view_channel=False),
-            guild.get_role(EXECUTIVE_ROLE_ID): discord.PermissionOverwrite(view_channel=True)
-        }
-
-        channel = await guild.create_text_channel(
-            LOG_CHANNEL_NAME,
-            overwrites=overwrites
-        )
-
-    return channel
-
-
-def has_role(ctx, role_id):
-    return any(role.id == role_id for role in ctx.author.roles)
-
-
-def is_owner(ctx):
-    return any(role.id == OWNER_ROLE_ID for role in ctx.author.roles)
-
-
-def higher_role(ctx, member):
-    return member.top_role >= ctx.author.top_role
-
+# ================= MODERATION =================
 
 @bot.command()
 async def purge(ctx, amount: int):
@@ -1040,18 +1008,26 @@ async def purge(ctx, amount: int):
     await ctx.channel.purge(limit=amount + 1)
 
     embed = discord.Embed(
-        title="🧹 Messages Purged",
-        description=f"**Deleted:** {amount} messages\n**Channel:** {ctx.channel.mention}\n**Moderator:** {ctx.author.mention}",
+        title="💜 Trade Market | Messages Purged",
+        description=(
+            f"**Deleted:** {amount} messages\n"
+            f"**Channel:** {ctx.channel.mention}\n"
+            f"**Moderator:** {ctx.author.mention}"
+        ),
         color=PURPLE
     )
+    embed.set_footer(text="Trade Market | Moderation Logs")
 
     await ctx.send(embed=embed)
 
     log = await get_log_channel(ctx.guild)
-
     await log.send(embed=discord.Embed(
-        title="🧹 Purge Log",
-        description=f"**Moderator:** {ctx.author.mention}\n**Messages Deleted:** {amount}\n**Channel:** {ctx.channel.mention}",
+        title="💜 Trade Market | Purge Log",
+        description=(
+            f"**Moderator:** {ctx.author.mention}\n"
+            f"**Messages Deleted:** {amount}\n"
+            f"**Channel:** {ctx.channel.mention}"
+        ),
         color=PURPLE
     ))
 
@@ -1073,17 +1049,22 @@ async def warn(ctx, member: discord.Member, *, reason="No reason"):
     })
 
     embed = discord.Embed(
-        title="⚠️ User Warned",
-        description=f"**User:** {member.mention}\n**User ID:** {member.id}\n**Reason:** {reason}\n**Moderator:** {ctx.author.mention}",
+        title="💜 Trade Market | User Warned",
+        description=(
+            f"**User:** {member.mention}\n"
+            f"**User ID:** {member.id}\n"
+            f"**Reason:** {reason}\n"
+            f"**Moderator:** {ctx.author.mention}"
+        ),
         color=PURPLE
     )
 
     embed.set_thumbnail(url=member.avatar.url if member.avatar else member.default_avatar.url)
+    embed.set_footer(text="Trade Market | Moderation Logs")
 
     await ctx.send(embed=embed)
 
     log = await get_log_channel(ctx.guild)
-
     await log.send(embed=embed)
 
 
@@ -1102,10 +1083,12 @@ async def warns(ctx, member: discord.Member):
             description += f"**{i}.** {w['time']} | {w['mod']} → {w['reason']}\n"
 
     embed = discord.Embed(
-        title="📋 Warn List",
+        title="💜 Trade Market | Warn List",
         description=f"**User:** {member.mention}\n\n{description}",
         color=PURPLE
     )
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text="Trade Market | Moderation Logs")
 
     await ctx.send(embed=embed)
 
@@ -1118,15 +1101,17 @@ async def unwarn(ctx, member: discord.Member):
     warn_data.pop(member.id, None)
 
     embed = discord.Embed(
-        title="✅ Warn Removed",
+        title="💜 Trade Market | Warn Removed",
         description=f"**User:** {member.mention}",
         color=PURPLE
     )
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text="Trade Market | Moderation Logs")
 
     await ctx.send(embed=embed)
 
 
-# !about komanda
+# ================= INFO COMMANDS =================
 
 @bot.command()
 async def about(ctx):
@@ -1154,14 +1139,13 @@ Because here you will find **serious traders**, **fast deals**, and a **communit
 💡 **Remember**
 Always follow the **server rules**, respect other members and enjoy trading.
 """,
-        color=discord.Color.purple()
+        color=PURPLE
     )
 
     embed.set_footer(text="Trade Market | Official Server")
     await ctx.send(embed=embed)
 
 
-# !rules komanda
 @bot.command()
 async def rules(ctx):
     if FOUNDER_ROLE_ID not in [role.id for role in ctx.author.roles]:
@@ -1169,9 +1153,9 @@ async def rules(ctx):
         return
 
     embed = discord.Embed(
-        title="📜 Trade Market | Server Rules",
+        title="💜 Trade Market | Server Rules",
         description="Welcome to **Trade Market**! To keep our community safe and fun, please follow these rules:",
-        color=discord.Color.purple()
+        color=PURPLE
     )
 
     embed.add_field(
@@ -1214,7 +1198,6 @@ async def rules(ctx):
     await ctx.send(embed=embed)
 
 
-# !mmtos komanda
 @bot.command()
 async def mmtos(ctx):
     if FOUNDER_ROLE_ID not in [role.id for role in ctx.author.roles]:
@@ -1222,9 +1205,9 @@ async def mmtos(ctx):
         return
 
     embed = discord.Embed(
-        title="📜 Trade Market | Middleman Terms of Service",
+        title="💜 Trade Market | Middleman Terms of Service",
         description="Welcome to **Trade Market MM Services**! To ensure **safe and fair trades**, please read the rules below carefully.",
-        color=discord.Color.purple()
+        color=PURPLE
     )
 
     embed.add_field(
@@ -1260,49 +1243,42 @@ async def mmtos(ctx):
     embed.set_footer(text="Trade Market | Official Middleman Terms")
     await ctx.send(embed=embed)
 
-FOUNDER_ROLE_ID = 1465697938155110411
 
 @bot.command()
 async def value(ctx):
-    # 🔒 Only Founder can use this command
     if FOUNDER_ROLE_ID not in [role.id for role in ctx.author.roles]:
         return await ctx.send("❌ Only the Founder can use this command.")
 
     embed = discord.Embed(
-        title="🎮 Official Value List",
+        title="💜 Trade Market | Official Value List",
         description="Here are the official value lists for some popular Roblox games 💜",
-        color=discord.Color.purple()
+        color=PURPLE
     )
 
-    # Adopt Me
     embed.add_field(
         name="🍼 Adopt Me",
         value="[View Adopt Me Value List](https://www.roblox.com/games/920587237/Adopt-Me)",
         inline=False
     )
 
-    # Murder Mystery 2
     embed.add_field(
         name="🔪 Murder Mystery 2",
         value="[View MM2 Value List](https://www.roblox.com/games/142823291/Murder-Mystery-2)",
         inline=False
     )
 
-    # Blade Ball
     embed.add_field(
         name="🗡️ Blade Ball",
         value="[View Blade Ball Value List](https://www.roblox.com/games/6632044412/Blade-Ball)",
         inline=False
     )
 
-    # Blox Fruits
     embed.add_field(
         name="🍑 Blox Fruits",
         value="[View Blox Fruits Value List](https://www.roblox.com/games/2753915549/Blox-Fruits)",
         inline=False
     )
 
-    # Pet Simulator 99
     embed.add_field(
         name="🐾 Pet Simulator 99",
         value="[View Pet Simulator 99 Value List](https://www.roblox.com/games/6785889800/Pet-Simulator-99)",
@@ -1310,20 +1286,18 @@ async def value(ctx):
     )
 
     embed.set_footer(text=f"{ctx.guild.name} | Official Value List")
-
     await ctx.send(embed=embed)
 
-# 🛒 Marketplace Rules
+
 @bot.command()
 async def marketrules(ctx):
-    # 🔒 Only Founder can use this command
     if FOUNDER_ROLE_ID not in [role.id for role in ctx.author.roles]:
         return await ctx.send("❌ Only the Founder can use this command.")
 
     embed = discord.Embed(
-        title="🛒 Marketplace Rules",
+        title="💜 Trade Market | Marketplace Rules",
         description="Welcome to the **Trade Market Marketplace**! To ensure a **safe and fair trading environment**, please follow these rules carefully.",
-        color=discord.Color.purple()
+        color=PURPLE
     )
 
     embed.add_field(
@@ -1360,15 +1334,13 @@ async def marketrules(ctx):
     await ctx.send(embed=embed)
 
 
-# 📝 Staff Application
 @bot.command()
 async def staffapp(ctx):
-    # 🔒 Only Founder can use this command
     if FOUNDER_ROLE_ID not in [role.id for role in ctx.author.roles]:
         return await ctx.send("❌ Only the Founder can use this command.")
 
     embed = discord.Embed(
-        title="📝 Staff Application",
+        title="💜 Trade Market | Staff Application",
         description="""
 Interested in becoming a **staff member** at **Trade Market**?  
 
@@ -1387,12 +1359,13 @@ We value honesty, responsibility, and enthusiasm — make sure your application 
 
 Thank you for your interest in helping make **Trade Market** a better and safer community!
 """,
-        color=discord.Color.purple()
+        color=PURPLE
     )
 
     embed.set_footer(text=f"{ctx.guild.name} | Official Staff Application")
     await ctx.send(embed=embed)
-                                                                                                           
+
+
 @bot.command(name="tos")
 async def tos(ctx):
     embed = discord.Embed(
@@ -1400,38 +1373,32 @@ async def tos(ctx):
         description=(
             "# TRADE MARKET\n"
             "## Server Terms of Service\n\n"
-
             "### Welcome\n"
             "Welcome to **Trade Market**. Please read the following terms before using the server.\n\n"
-
             "### Community Rules\n"
             "• Treat every member with **respect**.\n"
             "• **No spam** or flooding channels.\n"
             "• **No harassment, hate speech, or toxicity**.\n"
             "• Follow all **Discord guidelines**.\n\n"
-
             "### Trading Rules\n"
             "• Be **honest and fair** when trading.\n"
             "• **Scamming is strictly forbidden**.\n"
             "• Report suspicious activity to **staff immediately**.\n\n"
-
             "### Important Notice\n"
             "By remaining in this server you **agree to follow all rules and terms**.\n"
             "Breaking these rules may result in **warnings, mutes, kicks, or bans**.\n\n"
-
             "### Enjoy the Server\n"
             "Trade safely, respect others, and enjoy your time in **Trade Market**."
         ),
-        color=discord.Color.purple()
+        color=PURPLE
     )
 
-    embed.set_footer(text="Trade Market Administration")
-
+    embed.set_footer(text="Trade Market | Administration")
     await ctx.send(embed=embed)
-    
+
+
 @bot.command(name="support")
 async def support(ctx):
-    # 🔒 Only Founder can use this command
     if FOUNDER_ROLE_ID not in [role.id for role in ctx.author.roles]:
         return await ctx.send("❌ Only the Founder can use this command.")
 
@@ -1440,37 +1407,31 @@ async def support(ctx):
         description=(
             "# TRADE MARKET SUPPORT\n"
             "## Need Help?\n\n"
-
             "### Contact Support\n"
             "If you need help with **trades, tickets, or server issues**, please contact our **support team**.\n\n"
-
             "### What Support Can Help With\n"
             "• **Trade problems or disputes**\n"
             "• **Ticket issues**\n"
             "• **Server questions**\n"
             "• **Reporting scams or suspicious users**\n\n"
-
             "### Important\n"
             "Please be **patient and respectful** when contacting support.\n"
             "Our staff will respond **as soon as possible**.\n\n"
-
             "### Thank You\n"
             "Thank you for using **Trade Market Support** 💜"
         ),
-        color=discord.Color.purple()
+        color=PURPLE
     )
 
-    embed.set_footer(text="Trade Market Support Team")
-
+    embed.set_footer(text="Trade Market | Support Team")
     await ctx.send(embed=embed)
-                                                                                                
+
+
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user}")
 
-    # Persistent views (da dugmad rade i posle restarta)
-    bot.add_view(MercyView(None))
-    
+
 token = os.getenv("TOKEN")
 
 if not token:
