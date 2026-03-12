@@ -623,7 +623,8 @@ async def help(ctx):
         value="""
 `!about` — About the server 💜  
 `!rules` — Server rules 📜  
-`!mmtos` — Middleman Terms of Service 🛡️
+`!mmtos` — Middleman Terms of Service 🛡️  
+`!value` — Official Value List 🎮
 """,
         inline=False
     )
@@ -1201,6 +1202,58 @@ async def mmtos(ctx):
     embed.set_footer(text="Trade Market | Official Middleman Terms")
     await ctx.send(embed=embed)
 
+FOUNDER_ROLE_ID = 123456789012345678  # <-- stavi ovde tvoj Founder role ID
+
+@bot.command()
+async def value(ctx):
+    # 🔒 Only Founder can use this command
+    if FOUNDER_ROLE_ID not in [role.id for role in ctx.author.roles]:
+        return await ctx.send("❌ Only the Founder can use this command.")
+
+    embed = discord.Embed(
+        title="🎮 Official Value List",
+        description="Here are the official value lists for some popular Roblox games 💜",
+        color=discord.Color.purple()
+    )
+
+    # Adopt Me
+    embed.add_field(
+        name="🍼 Adopt Me",
+        value="[View Adopt Me Value List](https://www.roblox.com/games/920587237/Adopt-Me)",
+        inline=False
+    )
+
+    # Murder Mystery 2
+    embed.add_field(
+        name="🔪 Murder Mystery 2",
+        value="[View MM2 Value List](https://www.roblox.com/games/142823291/Murder-Mystery-2)",
+        inline=False
+    )
+
+    # Blade Ball
+    embed.add_field(
+        name="🗡️ Blade Ball",
+        value="[View Blade Ball Value List](https://www.roblox.com/games/6632044412/Blade-Ball)",
+        inline=False
+    )
+
+    # Blox Fruits
+    embed.add_field(
+        name="🍑 Blox Fruits",
+        value="[View Blox Fruits Value List](https://www.roblox.com/games/2753915549/Blox-Fruits)",
+        inline=False
+    )
+
+    # Pet Simulator 99
+    embed.add_field(
+        name="🐾 Pet Simulator 99",
+        value="[View Pet Simulator 99 Value List](https://www.roblox.com/games/6785889800/Pet-Simulator-99)",
+        inline=False
+    )
+
+    embed.set_footer(text=f"{ctx.guild.name} | Official Value List")
+
+    await ctx.send(embed=embed)
                                                        
                                                 
 @bot.event
