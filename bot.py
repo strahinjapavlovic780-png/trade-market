@@ -607,18 +607,18 @@ async def confirm(ctx, user1: discord.Member, user2: discord.Member):
 
 @bot.command()
 async def help(ctx):
-
     # 🔒 Only Founder can use this command
     if FOUNDER_ROLE_ID not in [role.id for role in ctx.author.roles]:
         return await ctx.send("❌ Only the Founder can use this command.")
 
     embed = discord.Embed(
-        title="📘 Trade Market's Bot Commands",
-        description="Here is a list of all available commands",
+        title=f"📘 {ctx.guild.name}'s Bot Commands",
+        description="Here is a list of all available commands:",
         color=discord.Color.purple()
     )
 
-embed.add_field(
+    # ℹ️ Server Info
+    embed.add_field(
         name="ℹ️ Server Info",
         value="""
 `!about` — About the server 💜  
@@ -635,8 +635,8 @@ embed.add_field(
             "`!panel` – Sends the Middleman panel\n"
             "`!close` – Closes the current ticket\n"
             "`!add @user` – Add user to ticket\n"
-            "`!remove @user` - Remove user from ticket\n"
-            "`!unclaim` - Unclaim the ticket"
+            "`!remove @user` – Remove user from ticket\n"
+            "`!unclaim` – Unclaim the ticket"
         ),
         inline=False
     )
@@ -699,17 +699,20 @@ embed.add_field(
         inline=False
     )
 
+    # 🛠 Moderation Commands
     embed.add_field(
         name="🛠 Moderation Commands",
         value="""
-`!purge <amount>` — Delete messages (Lead)
-
+`!purge <amount>` — Delete messages (Lead)  
 `!warn @user <reason>` — Warn a user (Lead)  
 `!warns @user` — Check warns (Lead)  
 `!unwarn @user` — Remove warn (Lead)
+""",
+        inline=False
+    )
 
-
-    embed.set_footer(text="Trade Market | Official")
+    # Footer sa imenom servera
+    embed.set_footer(text=f"{ctx.guild.name} | Official Bot")
 
     await ctx.send(embed=embed)
 
