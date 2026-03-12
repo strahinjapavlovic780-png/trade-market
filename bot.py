@@ -717,9 +717,9 @@ embed.add_field(
     inline=False
 )
 
-    embed.set_footer(text="Enebas | Official")
+embed.set_footer(text="Trade Market | Official")
 
-    await ctx.send(embed=embed)
+await ctx.send(embed=embed)
 
 vouches = {}
 
