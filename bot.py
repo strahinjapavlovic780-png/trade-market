@@ -778,10 +778,18 @@ async def addvouch(ctx, member: discord.Member, amount: int):
     save_vouches(vouches_data)
 
     embed = discord.Embed(
-        title="⭐ Vouch Added",
-        description=f"{member.mention} now has **{vouches_data[user_id]}** vouches.",
-        color=discord.Color.green()
+        title="💜 Trade Market | Vouch Added",
+        description=(
+            "# ⭐ Vouch Added\n\n"
+            f"{member.mention} received **{amount}** vouches.\n\n"
+            "## Current Total\n"
+            f"They now have **{vouches_data[user_id]}** vouches."
+        ),
+        color=discord.Color.purple()
     )
+
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text=f"{ctx.guild.name} | Vouch System")
 
     await ctx.send(embed=embed)
 
@@ -800,10 +808,18 @@ async def removevouch(ctx, member: discord.Member):
     save_vouches(vouches_data)
 
     embed = discord.Embed(
-        title="🗑️ Vouches Removed",
-        description=f"{member.mention}'s vouches have been reset to **0**.",
-        color=discord.Color.red()
+        title="💜 Trade Market | Vouches Removed",
+        description=(
+            "# 🗑️ Vouches Reset\n\n"
+            f"{member.mention}'s vouches have been **reset to 0**.\n\n"
+            "## Status\n"
+            "All previous vouches have been removed."
+        ),
+        color=discord.Color.purple()
     )
+
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text=f"{ctx.guild.name} | Vouch System")
 
     await ctx.send(embed=embed)
 
@@ -822,12 +838,18 @@ async def vouches(ctx, member: discord.Member = None):
     count = vouches_data.get(str(member.id), 0)
 
     embed = discord.Embed(
-        title="⭐ Vouch Count",
-        description=f"{member.mention} currently has **{count}** vouches.",
-        color=discord.Color.green()
+        title="💜 Trade Market | Vouch Count",
+        description=(
+            "# ⭐ Vouch Count\n\n"
+            f"{member.mention} currently has **{count}** vouches.\n\n"
+            "## Reputation Status\n"
+            "Vouches represent successful trades and trust."
+        ),
+        color=discord.Color.purple()
     )
 
     embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text=f"{ctx.guild.name} | Vouch System")
 
     await ctx.send(embed=embed)
 
@@ -848,12 +870,18 @@ async def vouch(ctx, member: discord.Member):
     save_vouches(vouches_data)
 
     embed = discord.Embed(
-        title="⭐ New Vouch",
-        description=f"{ctx.author.mention} vouched for {member.mention}\n\nThey now have **{vouches_data[user_id]}** vouches.",
-        color=discord.Color.green()
+        title="💜 Trade Market | New Vouch",
+        description=(
+            "# ⭐ New Vouch\n\n"
+            f"{ctx.author.mention} vouched for {member.mention}.\n\n"
+            "## Current Total\n"
+            f"They now have **{vouches_data[user_id]}** vouches."
+        ),
+        color=discord.Color.purple()
     )
 
     embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text=f"{ctx.guild.name} | Vouch System")
 
     await ctx.send(embed=embed)
 
