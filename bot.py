@@ -940,9 +940,12 @@ You have one minute to respond.
 )
 
 COOLDOWN = 300
+OWNER_ROLE_ID = 1465695641320685730
 
 LOG_CHANNEL_NAME = "mod-logs"
 PURPLE = 0x9b59b6
+
+warn_data = {}
 
 
 async def get_log_channel(guild):
@@ -964,6 +967,14 @@ async def get_log_channel(guild):
 
 def has_role(ctx, role_id):
     return any(role.id == role_id for role in ctx.author.roles)
+
+
+def is_owner(ctx):
+    return any(role.id == OWNER_ROLE_ID for role in ctx.author.roles)
+
+
+def higher_role(ctx, member):
+    return member.top_role >= ctx.author.top_role
 
 
 @bot.command()
@@ -995,6 +1006,17 @@ async def warn(ctx, member: discord.Member, *, reason="No reason"):
     if not has_role(ctx, LEAD_ROLE_ID):
         return
 
+    if higher_role(ctx, member):
+        return await ctx.send("❌ Cannot warn a user with equal or higher role.")
+
+    time = discord.utils.utcnow().strftime("%H:%M")
+
+    warn_data.setdefault(member.id, []).append({
+        "reason": reason,
+        "mod": ctx.author,
+        "time": time
+    })
+
     embed = discord.Embed(
         title="⚠️ User Warned",
         description=f"**User:** {member.mention}\n**User ID:** {member.id}\n**Reason:** {reason}\n**Moderator:** {ctx.author.mention}",
@@ -1007,11 +1029,7 @@ async def warn(ctx, member: discord.Member, *, reason="No reason"):
 
     log = await get_log_channel(ctx.guild)
 
-    await log.send(embed=discord.Embed(
-        title="⚠️ Warn Log",
-        description=f"**Moderator:** {ctx.author.mention}\n**User:** {member.mention}\n**Reason:** {reason}",
-        color=PURPLE
-    ))
+    await log.send(embed=embed)
 
 
 @bot.command()
@@ -1019,9 +1037,18 @@ async def warns(ctx, member: discord.Member):
     if not has_role(ctx, LEAD_ROLE_ID):
         return
 
+    warns = warn_data.get(member.id, [])
+
+    if not warns:
+        description = "**No warnings found**"
+    else:
+        description = ""
+        for i, w in enumerate(warns, 1):
+            description += f"**{i}.** {w['time']} | {w['mod']} → {w['reason']}\n"
+
     embed = discord.Embed(
         title="📋 Warn List",
-        description=f"**User:** {member.mention}\n**User ID:** {member.id}\n\n*(Database not added yet)*",
+        description=f"**User:** {member.mention}\n\n{description}",
         color=PURPLE
     )
 
@@ -1033,9 +1060,11 @@ async def unwarn(ctx, member: discord.Member):
     if not has_role(ctx, LEAD_ROLE_ID):
         return
 
+    warn_data.pop(member.id, None)
+
     embed = discord.Embed(
         title="✅ Warn Removed",
-        description=f"**User:** {member.mention}\n**User ID:** {member.id}",
+        description=f"**User:** {member.mention}",
         color=PURPLE
     )
 
@@ -1043,72 +1072,36 @@ async def unwarn(ctx, member: discord.Member):
 
 
 @bot.command()
-async def announce(ctx, *, message):
-    if not has_role(ctx, EXECUTIVE_ROLE_ID):
-        return
-
-    embed = discord.Embed(
-        title="📢 Announcement",
-        description=f"**{message}**",
-        color=PURPLE
-    )
-
-    await ctx.send(embed=embed)
-
-
-@bot.command()
-async def giveaway(ctx, *, prize):
-    if not has_role(ctx, EXECUTIVE_ROLE_ID):
-        return
-
-    embed = discord.Embed(
-        title="🎉 Giveaway",
-        description=f"**Prize:** {prize}\n\nReact with 🎉 to enter!",
-        color=PURPLE
-    )
-
-    msg = await ctx.send(embed=embed)
-
-    await msg.add_reaction("🎉")
-
-
-@bot.command()
-async def promote(ctx, member: discord.Member):
+async def promote(ctx, member: discord.Member, role: discord.Role):
     if not has_role(ctx, VICE_PRESIDENT_ROLE_ID):
         return
 
-    embed = discord.Embed(
-        title="⬆️ Promotion",
-        description=f"**User:** {member.mention}\n**User ID:** {member.id}",
-        color=PURPLE
-    )
-
-    await ctx.send(embed=embed)
-
-
-@bot.command()
-async def demote(ctx, member: discord.Member):
-    if not has_role(ctx, VICE_PRESIDENT_ROLE_ID):
-        return
-
-    embed = discord.Embed(
-        title="⬇️ Demotion",
-        description=f"**User:** {member.mention}\n**User ID:** {member.id}",
-        color=PURPLE
-    )
-
-    await ctx.send(embed=embed)
-
-
-@bot.command()
-async def role(ctx, member: discord.Member, role: discord.Role):
-    if not has_role(ctx, VICE_PRESIDENT_ROLE_ID):
-        return
+    if higher_role(ctx, member):
+        return await ctx.send("❌ Cannot promote user with equal or higher role.")
 
     await member.add_roles(role)
 
     embed = discord.Embed(
-        title="🎭 Role Added",
+        title="⬆️ Promotion",
+        description=f"**User:** {member.mention}\n**Role:** {role.mention}",
+        color=PURPLE
+    )
+
+    await ctx.send(embed=embed)
+
+
+@bot.command()
+async def demote(ctx, member: discord.Member, role: discord.Role):
+    if not has_role(ctx, VICE_PRESIDENT_ROLE_ID):
+        return
+
+    if higher_role(ctx, member):
+        return await ctx.send("❌ Cannot demote user with equal or higher role.")
+
+    await member.remove_roles(role)
+
+    embed = discord.Embed(
+        title="⬇️ Demotion",
         description=f"**User:** {member.mention}\n**Role:** {role.mention}",
         color=PURPLE
     )
@@ -1122,6 +1115,9 @@ async def kick(ctx, member: discord.Member, *, reason="No reason"):
     if not has_role(ctx, LEAD_ROLE_ID):
         return
 
+    if higher_role(ctx, member):
+        return await ctx.send("❌ Cannot kick user with equal or higher role.")
+
     await member.kick(reason=reason)
 
     embed = discord.Embed(
@@ -1134,16 +1130,15 @@ async def kick(ctx, member: discord.Member, *, reason="No reason"):
 
     await ctx.send(embed=embed)
 
-    log = await get_log_channel(ctx.guild)
-
-    await log.send(embed=embed)
-
 
 @bot.command()
 @commands.cooldown(1, COOLDOWN, commands.BucketType.user)
 async def ban(ctx, member: discord.Member, *, reason="No reason"):
     if not has_role(ctx, EXECUTIVE_ROLE_ID):
         return
+
+    if higher_role(ctx, member):
+        return await ctx.send("❌ Cannot ban user with equal or higher role.")
 
     await member.ban(reason=reason)
 
@@ -1157,32 +1152,14 @@ async def ban(ctx, member: discord.Member, *, reason="No reason"):
 
     await ctx.send(embed=embed)
 
-    log = await get_log_channel(ctx.guild)
-
-    await log.send(embed=embed)
-
-
-@bot.command()
-async def unban(ctx, user_id: int):
-    if not has_role(ctx, EXECUTIVE_ROLE_ID):
-        return
-
-    user = await bot.fetch_user(user_id)
-    await ctx.guild.unban(user)
-
-    embed = discord.Embed(
-        title="🔓 User Unbanned",
-        description=f"**User:** {user}\n**User ID:** {user_id}",
-        color=PURPLE
-    )
-
-    await ctx.send(embed=embed)
-
 
 @bot.command()
 async def timeout(ctx, member: discord.Member, minutes: int):
     if not has_role(ctx, STAFF_ROLE_ID):
         return
+
+    if higher_role(ctx, member):
+        return await ctx.send("❌ Cannot timeout user with equal or higher role.")
 
     until = discord.utils.utcnow() + datetime.timedelta(minutes=minutes)
 
@@ -1218,6 +1195,9 @@ async def on_command_error(ctx, error):
 
     if isinstance(error, commands.CommandOnCooldown):
 
+        if is_owner(ctx):
+            return
+
         embed = discord.Embed(
             title="⏳ Cooldown",
             description=f"Wait **{round(error.retry_after)} seconds** before using this command again.",
@@ -1225,7 +1205,6 @@ async def on_command_error(ctx, error):
         )
 
         await ctx.send(embed=embed)
-
                                                        
                                                 
 @bot.event
