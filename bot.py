@@ -721,7 +721,7 @@ async def help(ctx):
     await ctx.send(embed=embed)
 
 
-await ctx.send(embed=embed)
+
 
 vouches = {}
 
