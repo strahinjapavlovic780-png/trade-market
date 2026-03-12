@@ -618,6 +618,16 @@ async def help(ctx):
         color=discord.Color.purple()
     )
 
+embed.add_field(
+        name="ℹ️ Server Info",
+        value="""
+`!about` — About the server 💜  
+`!rules` — Server rules 📜  
+`!mmtos` — Middleman Terms of Service 🛡️
+""",
+        inline=False
+    )
+
     # 🎟 Ticket System
     embed.add_field(
         name="🎟 Ticket System",
@@ -1054,7 +1064,139 @@ async def unwarn(ctx, member: discord.Member):
     await ctx.send(embed=embed)
 
 
+# !about komanda
 
+@bot.command()
+async def about(ctx):
+    if FOUNDER_ROLE_ID not in [role.id for role in ctx.author.roles]:
+        await ctx.send("❌ You don't have permission to use this command!")
+        return
+
+    embed = discord.Embed(
+        title="💜 Trade Market | About Server",
+        description="""
+Welcome to **Trade Market** — a place where traders meet, exchange and grow together.
+
+📊 **What we offer**
+• Safe and organized **trading channels**  
+• Active **moderation team**  
+• Friendly and growing **community**  
+• Fair and transparent **deals**
+
+🤝 **Our Goal**
+Our mission is to create a **trusted trading environment** where everyone can trade safely, meet new people and grow their market experience.
+
+⚡ **Why join us?**
+Because here you will find **serious traders**, **fast deals**, and a **community that actually helps each other**.
+
+💡 **Remember**
+Always follow the **server rules**, respect other members and enjoy trading.
+""",
+        color=discord.Color.purple()
+    )
+
+    embed.set_footer(text="Trade Market | Official Server")
+    await ctx.send(embed=embed)
+
+
+# !rules komanda
+@bot.command()
+async def rules(ctx):
+    if FOUNDER_ROLE_ID not in [role.id for role in ctx.author.roles]:
+        await ctx.send("❌ You don't have permission to use this command!")
+        return
+
+    embed = discord.Embed(
+        title="📜 Trade Market | Server Rules",
+        description="Welcome to **Trade Market**! To keep our community safe and fun, please follow these rules:",
+        color=discord.Color.purple()
+    )
+
+    embed.add_field(
+        name="1️⃣ Respect Everyone",
+        value="Treat all members with **kindness and respect**. No harassment, hate speech, or discrimination allowed. 🙏",
+        inline=False
+    )
+
+    embed.add_field(
+        name="2️⃣ Keep Chat Clean",
+        value="Avoid **spamming, excessive caps, or irrelevant messages**. 🧹",
+        inline=False
+    )
+
+    embed.add_field(
+        name="3️⃣ Trade Safely",
+        value="Follow **trade guidelines** and avoid scams. 💼",
+        inline=False
+    )
+
+    embed.add_field(
+        name="4️⃣ NSFW Content",
+        value="**No NSFW content**. 🚫",
+        inline=False
+    )
+
+    embed.add_field(
+        name="5️⃣ Proper Channels",
+        value="Post in the **correct channel**. 📌",
+        inline=False
+    )
+
+    embed.add_field(
+        name="6️⃣ Listen to Moderators",
+        value="Moderators have the **final say**. 🛡️",
+        inline=False
+    )
+
+    embed.set_footer(text="Trade Market | Official Server")
+    await ctx.send(embed=embed)
+
+
+# !mmtos komanda
+@bot.command()
+async def mmtos(ctx):
+    if FOUNDER_ROLE_ID not in [role.id for role in ctx.author.roles]:
+        await ctx.send("❌ You don't have permission to use this command!")
+        return
+
+    embed = discord.Embed(
+        title="📜 Trade Market | Middleman Terms of Service",
+        description="Welcome to **Trade Market MM Services**! To ensure **safe and fair trades**, please read the rules below carefully.",
+        color=discord.Color.purple()
+    )
+
+    embed.add_field(
+        name="1️⃣ Use Middleman Services Properly",
+        value="Only request a MM in designated channels. 🙏",
+        inline=False
+    )
+
+    embed.add_field(
+        name="2️⃣ Respect MM Decisions",
+        value="Middlemen have the **final say** in disputes. 🛡️",
+        inline=False
+    )
+
+    embed.add_field(
+        name="3️⃣ Provide Accurate Info",
+        value="Always provide **full and correct trade details**. 📝",
+        inline=False
+    )
+
+    embed.add_field(
+        name="4️⃣ No Bypassing the MM",
+        value="**Do not bypass** the middleman. ❌",
+        inline=False
+    )
+
+    embed.add_field(
+        name="5️⃣ Report Issues Responsibly",
+        value="Report problems to moderators immediately. ⚠️",
+        inline=False
+    )
+
+    embed.set_footer(text="Trade Market | Official Middleman Terms")
+    await ctx.send(embed=embed)
 
                                                        
                                                 
