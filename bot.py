@@ -41,10 +41,13 @@ LEAD_ROLE_ID = 1465698723479687387
 EXECUTIVE_ROLE_ID = 1465698169672175676
 VICE_PRESIDENT_ROLE_ID = 1465697969851601050
 OWNER_ROLE_ID = 1465695641320685730
+WELCOME_CHANNEL_ID = 1478783015017648259
+INVITE_LOG_CHANNEL_ID = 1479054141312471092
 
 LOG_CHANNEL_NAME = "mod-logs"
 COOLDOWN = 300
 warn_data = {}
+invite_cache = {}
 
 
 def is_mm():
@@ -1681,12 +1684,80 @@ async def unban(ctx, user_id: int, *, reason="No reason provided"):
     if log:
         await log.send(embed=embed)
 
+@bot.event
+async def on_member_join(member):
 
+    guild = member.guild
+
+    welcome_channel = guild.get_channel(WELCOME_CHANNEL_ID)
+    invite_channel = guild.get_channel(INVITE_LOG_CHANNEL_ID)
+
+    inviter = "Unknown"
+    used_invite = "Unknown"
+
+    new_invites = await guild.invites()
+    old_invites = invite_cache.get(guild.id)
+
+    if old_invites:
+        for new in new_invites:
+            for old in old_invites:
+                if new.code == old.code and new.uses > old.uses:
+                    inviter = new.inviter.mention
+                    used_invite = new.code
+
+    invite_cache[guild.id] = new_invites
+
+    # ================= WELCOME EMBED =================
+
+    welcome_embed = discord.Embed(
+        title="💜 Trade Market | Welcome",
+        description=(
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"**Welcome {member.mention}!**\n\n"
+            "We are happy to have you in **Trade Market**.\n\n"
+            "**Trade safely, respect others, and enjoy your stay!**\n"
+            "━━━━━━━━━━━━━━━━━━━━━━"
+        ),
+        color=PURPLE
+    )
+
+    welcome_embed.set_thumbnail(url=member.display_avatar.url)
+    welcome_embed.set_footer(text="Trade Market | Welcome System")
+
+    if welcome_channel:
+        await welcome_channel.send(embed=welcome_embed)
+
+    # ================= INVITE EMBED =================
+
+    invite_embed = discord.Embed(
+        title="📈 Trade Market | New Member Joined",
+        description=(
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"**User:** {member.mention}\n"
+            f"**User ID:** {member.id}\n\n"
+            f"**Invited By:** {inviter}\n"
+            f"**Invite Code:** {used_invite}\n\n"
+            f"**Account Created:** <t:{int(member.created_at.timestamp())}:F>\n"
+            "━━━━━━━━━━━━━━━━━━━━━━"
+        ),
+        color=PURPLE
+    )
+
+    invite_embed.set_thumbnail(url=member.display_avatar.url)
+    invite_embed.set_footer(text="Trade Market | Invite Tracker")
+
+    if invite_channel:
+        await invite_channel.send(embed=invite_embed)
 
 
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user}")
+
+    for guild in bot.guilds:
+        invite_cache[guild.id] = await guild.invites()
+
+    bot.add_view(MercyView(None))
 
 
 token = os.getenv("TOKEN")
