@@ -31,6 +31,10 @@ FOUNDER_ROLE_ID = 1465697938155110411
 STAFF_CHANNEL_ID = 1480919385966116916
 MERCY_ROLE_ID = 1465699224061743156
 TICKET_CATEGORY_ID = 1466889112652087539
+STAFF_ROLE_ID = 1465698968439886030
+LEAD_ROLE_ID = 1465698723479687387
+EXECUTIVE_ROLE_ID = 1465698169672175676
+VICE_PRESIDENT_ROLE_ID = 1465697969851601050
 
 def is_mm():
     async def predicate(ctx):
@@ -686,6 +690,33 @@ async def help(ctx):
         inline=False
     )
 
+embed.add_field(
+    name="🛠 Moderation Commands",
+    value="""
+`!purge <amount>` — Delete messages (Lead)
+
+`!warn @user <reason>` — Warn a user (Lead)  
+`!warns @user` — Check warns (Lead)  
+`!unwarn @user` — Remove warn (Lead)
+
+`!kick @user <reason>` — Kick a user (Lead)
+
+`!ban @user <reason>` — Ban a user (Executive)  
+`!unban <userID>` — Unban a user (Executive)
+
+`!timeout @user <minutes>` — Timeout user (Staff)  
+`!untimeout @user` — Remove timeout (Staff)
+
+`!announce <message>` — Send announcement (Executive)  
+`!giveaway <prize>` — Start giveaway (Executive)
+
+`!promote @user` — Promote member (Vice President)  
+`!demote @user` — Demote member (Vice President)  
+`!role @user @role` — Give role (Vice President)
+""",
+    inline=False
+)
+
     embed.set_footer(text="Enebas | Official")
 
     await ctx.send(embed=embed)
@@ -905,7 +936,274 @@ You have one minute to respond.
     embed=embed,
     view=MercyView(member)
 )
-    
+
+
+COOLDOWN = 300
+
+
+LOG_CHANNEL_NAME = "mod-logs"
+PURPLE = 0x9b59b6
+
+
+async def get_log_channel(guild):
+    channel = discord.utils.get(guild.text_channels, name=LOG_CHANNEL_NAME)
+
+    if channel is None:
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(view_channel=False),
+            guild.get_role(EXECUTIVE_ROLE_ID): discord.PermissionOverwrite(view_channel=True)
+        }
+
+        channel = await guild.create_text_channel(
+            LOG_CHANNEL_NAME,
+            overwrites=overwrites
+        )
+
+    return channel
+
+
+def has_role(ctx, role_id):
+    return any(role.id == role_id for role in ctx.author.roles)
+
+
+@bot.command()
+@commands.cooldown(1, COOLDOWN, commands.BucketType.user)
+async def purge(ctx, amount: int):
+    if not has_role(ctx, LEAD_ROLE_ID):
+        return
+
+    await ctx.channel.purge(limit=amount + 1)
+
+    embed = discord.Embed(title="Messages Purged",
+    description=f"Deleted **{amount}** messages",
+    color=PURPLE)
+
+    await ctx.send(embed=embed)
+
+    log = await get_log_channel(ctx.guild)
+
+    await log.send(embed=discord.Embed(
+    title="Purge Log",
+    description=f"{ctx.author.mention} purged **{amount}** messages in {ctx.channel.mention}",
+    color=PURPLE))
+
+
+@bot.command()
+@commands.cooldown(1, COOLDOWN, commands.BucketType.user)
+async def warn(ctx, member: discord.Member, *, reason="No reason"):
+    if not has_role(ctx, LEAD_ROLE_ID):
+        return
+
+    embed = discord.Embed(title="User Warned",
+    description=f"{member.mention}\nReason: **{reason}**",
+    color=PURPLE)
+
+    await ctx.send(embed=embed)
+
+    log = await get_log_channel(ctx.guild)
+
+    await log.send(embed=discord.Embed(
+    title="Warn Log",
+    description=f"{ctx.author.mention} warned {member.mention}\nReason: {reason}",
+    color=PURPLE))
+
+
+@bot.command()
+@commands.cooldown(1, COOLDOWN, commands.BucketType.user)
+async def warns(ctx, member: discord.Member):
+    if not has_role(ctx, LEAD_ROLE_ID):
+        return
+
+    embed = discord.Embed(
+    title="Warn List",
+    description=f"Warns for {member.mention}\n(Database not added yet)",
+    color=PURPLE)
+
+    await ctx.send(embed=embed)
+
+
+@bot.command()
+@commands.cooldown(1, COOLDOWN, commands.BucketType.user)
+async def unwarn(ctx, member: discord.Member):
+    if not has_role(ctx, LEAD_ROLE_ID):
+        return
+
+    embed = discord.Embed(
+    title="Warn Removed",
+    description=f"{member.mention}",
+    color=PURPLE)
+
+    await ctx.send(embed=embed)
+
+
+@bot.command()
+@commands.cooldown(1, COOLDOWN, commands.BucketType.user)
+async def announce(ctx, *, message):
+    if not has_role(ctx, EXECUTIVE_ROLE_ID):
+        return
+
+    embed = discord.Embed(
+    title="Announcement",
+    description=message,
+    color=PURPLE)
+
+    await ctx.send(embed=embed)
+
+
+@bot.command()
+@commands.cooldown(1, COOLDOWN, commands.BucketType.user)
+async def giveaway(ctx, *, prize):
+    if not has_role(ctx, EXECUTIVE_ROLE_ID):
+        return
+
+    embed = discord.Embed(
+    title="🎉 Giveaway",
+    description=f"Prize: **{prize}**\nReact with 🎉 to enter",
+    color=PURPLE)
+
+    msg = await ctx.send(embed=embed)
+
+    await msg.add_reaction("🎉")
+
+
+@bot.command()
+@commands.cooldown(1, COOLDOWN, commands.BucketType.user)
+async def promote(ctx, member: discord.Member):
+    if not has_role(ctx, VICE_PRESIDENT_ROLE_ID):
+        return
+
+    embed = discord.Embed(
+    title="Promotion",
+    description=f"{member.mention} has been promoted",
+    color=PURPLE)
+
+    await ctx.send(embed=embed)
+
+
+@bot.command()
+@commands.cooldown(1, COOLDOWN, commands.BucketType.user)
+async def demote(ctx, member: discord.Member):
+    if not has_role(ctx, VICE_PRESIDENT_ROLE_ID):
+        return
+
+    embed = discord.Embed(
+    title="Demotion",
+    description=f"{member.mention} has been demoted",
+    color=PURPLE)
+
+    await ctx.send(embed=embed)
+
+
+@bot.command()
+@commands.cooldown(1, COOLDOWN, commands.BucketType.user)
+async def role(ctx, member: discord.Member, role: discord.Role):
+    if not has_role(ctx, VICE_PRESIDENT_ROLE_ID):
+        return
+
+    await member.add_roles(role)
+
+    embed = discord.Embed(
+    title="Role Added",
+    description=f"{role.mention} given to {member.mention}",
+    color=PURPLE)
+
+    await ctx.send(embed=embed)
+
+
+@bot.command()
+@commands.cooldown(1, COOLDOWN, commands.BucketType.user)
+async def kick(ctx, member: discord.Member, *, reason="No reason"):
+    if not has_role(ctx, LEAD_ROLE_ID):
+        return
+
+    await member.kick(reason=reason)
+
+    embed = discord.Embed(
+    title="User Kicked",
+    description=f"{member.mention}\nReason: {reason}",
+    color=PURPLE)
+
+    await ctx.send(embed=embed)
+
+
+@bot.command()
+@commands.cooldown(1, COOLDOWN, commands.BucketType.user)
+async def ban(ctx, member: discord.Member, *, reason="No reason"):
+    if not has_role(ctx, EXECUTIVE_ROLE_ID):
+        return
+
+    await member.ban(reason=reason)
+
+    embed = discord.Embed(
+    title="User Banned",
+    description=f"{member.mention}\nReason: {reason}",
+    color=PURPLE)
+
+    await ctx.send(embed=embed)
+
+
+@bot.command()
+@commands.cooldown(1, COOLDOWN, commands.BucketType.user)
+async def unban(ctx, user_id: int):
+    if not has_role(ctx, EXECUTIVE_ROLE_ID):
+        return
+
+    user = await bot.fetch_user(user_id)
+    await ctx.guild.unban(user)
+
+    embed = discord.Embed(
+    title="User Unbanned",
+    description=f"{user}",
+    color=PURPLE)
+
+    await ctx.send(embed=embed)
+
+
+@bot.command()
+@commands.cooldown(1, COOLDOWN, commands.BucketType.user)
+async def timeout(ctx, member: discord.Member, minutes: int):
+    if not has_role(ctx, STAFF_ROLE_ID):
+        return
+
+    until = discord.utils.utcnow() + datetime.timedelta(minutes=minutes)
+
+    await member.timeout(until)
+
+    embed = discord.Embed(
+    title="User Timed Out",
+    description=f"{member.mention} for {minutes} minutes",
+    color=PURPLE)
+
+    await ctx.send(embed=embed)
+
+
+@bot.command()
+@commands.cooldown(1, COOLDOWN, commands.BucketType.user)
+async def untimeout(ctx, member: discord.Member):
+    if not has_role(ctx, STAFF_ROLE_ID):
+        return
+
+    await member.timeout(None)
+
+    embed = discord.Embed(
+    title="Timeout Removed",
+    description=f"{member.mention}",
+    color=PURPLE)
+
+    await ctx.send(embed=embed)
+
+
+@bot.event
+async def on_command_error(ctx, error):
+
+    if isinstance(error, commands.CommandOnCooldown):
+
+        embed = discord.Embed(
+        title="Cooldown",
+        description=f"Wait **{round(error.retry_after)} seconds** before using this command again.",
+        color=PURPLE)
+
+        await ctx.send(embed=embed)
                             
                                                        
                                                 
