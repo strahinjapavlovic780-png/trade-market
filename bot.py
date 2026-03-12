@@ -916,10 +916,9 @@ async def on_ready():
     # Persistent views (da dugmad rade i posle restarta)
     bot.add_view(MercyView(None))
     
-
 token = os.getenv("TOKEN")
 
 if not token:
-    raise ValueError("TOKEN1 environment variable is not set.")
+    raise ValueError("TOKEN environment variable not set")
 
-bot.run(TOKEN)
+bot.run(token)
