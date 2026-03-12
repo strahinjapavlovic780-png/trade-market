@@ -624,6 +624,7 @@ async def help(ctx):
 `!about` — About the server 💜  
 `!tos` — Server TOS 💜
 `!rules` — Server rules 📜  
+`!support` — Server Support 🆘
 `!mmtos` — Middleman Terms of Service 🛡️  
 `!value` — Official Value List 🎮  
 `!marketrules` — Marketplace Rules 🛒  
@@ -1369,6 +1370,41 @@ async def tos(ctx):
     )
 
     embed.set_footer(text="Trade Market Administration")
+
+    await ctx.send(embed=embed)
+    
+@bot.command(name="support")
+async def support(ctx):
+    # 🔒 Only Founder can use this command
+    if FOUNDER_ROLE_ID not in [role.id for role in ctx.author.roles]:
+        return await ctx.send("❌ Only the Founder can use this command.")
+
+    embed = discord.Embed(
+        title="💜 Trade Market | Support",
+        description=(
+            "# TRADE MARKET SUPPORT\n"
+            "## Need Help?\n\n"
+
+            "### Contact Support\n"
+            "If you need help with **trades, tickets, or server issues**, please contact our **support team**.\n\n"
+
+            "### What Support Can Help With\n"
+            "• **Trade problems or disputes**\n"
+            "• **Ticket issues**\n"
+            "• **Server questions**\n"
+            "• **Reporting scams or suspicious users**\n\n"
+
+            "### Important\n"
+            "Please be **patient and respectful** when contacting support.\n"
+            "Our staff will respond **as soon as possible**.\n\n"
+
+            "### Thank You\n"
+            "Thank you for using **Trade Market Support** 💜"
+        ),
+        color=discord.Color.purple()
+    )
+
+    embed.set_footer(text="Trade Market Support Team")
 
     await ctx.send(embed=embed)
                                                                                                 
