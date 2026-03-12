@@ -624,7 +624,9 @@ async def help(ctx):
 `!about` — About the server 💜  
 `!rules` — Server rules 📜  
 `!mmtos` — Middleman Terms of Service 🛡️  
-`!value` — Official Value List 🎮
+`!value` — Official Value List 🎮  
+`!marketrules` — Marketplace Rules 🛒  
+`!staffapp` — Staff Application 📝
 """,
         inline=False
     )
@@ -716,8 +718,6 @@ async def help(ctx):
     embed.set_footer(text=f"{ctx.guild.name} | Official Bot")
 
     await ctx.send(embed=embed)
-
-
 
 
 vouches = {}
@@ -1202,7 +1202,7 @@ async def mmtos(ctx):
     embed.set_footer(text="Trade Market | Official Middleman Terms")
     await ctx.send(embed=embed)
 
-FOUNDER_ROLE_ID = 1465697938155110411
+FOUNDER_ROLE_ID = k1465697938155110411
 
 @bot.command()
 async def value(ctx):
@@ -1254,7 +1254,87 @@ async def value(ctx):
     embed.set_footer(text=f"{ctx.guild.name} | Official Value List")
 
     await ctx.send(embed=embed)
-                                                       
+
+# 🛒 Marketplace Rules
+@bot.command()
+async def marketrules(ctx):
+    # 🔒 Only Founder can use this command
+    if FOUNDER_ROLE_ID not in [role.id for role in ctx.author.roles]:
+        return await ctx.send("❌ Only the Founder can use this command.")
+
+    embed = discord.Embed(
+        title="🛒 Marketplace Rules",
+        description="Welcome to the **Trade Market Marketplace**! To ensure a **safe and fair trading environment**, please follow these rules carefully.",
+        color=discord.Color.purple()
+    )
+
+    embed.add_field(
+        name="1️⃣ Respect Traders",
+        value="Treat all users with **respect**. No harassment, offensive language, or discrimination is allowed. 🙏",
+        inline=False
+    )
+
+    embed.add_field(
+        name="2️⃣ Use Correct Channels",
+        value="Always post trades in the **designated marketplace channels**. Avoid spamming or advertising in other channels. 📌",
+        inline=False
+    )
+
+    embed.add_field(
+        name="3️⃣ No Scams",
+        value="Attempting to **trick or scam other traders** is strictly prohibited. Report suspicious activity immediately. ❌",
+        inline=False
+    )
+
+    embed.add_field(
+        name="4️⃣ Middleman Use",
+        value="When trading **high-value items**, always use an **official Middleman (MM)** to ensure safety. 🛡️",
+        inline=False
+    )
+
+    embed.add_field(
+        name="5️⃣ Follow Discord Rules",
+        value="All general **Discord server rules** still apply while trading. ⚠️",
+        inline=False
+    )
+
+    embed.set_footer(text=f"{ctx.guild.name} | Official Marketplace Rules")
+    await ctx.send(embed=embed)
+
+
+# 📝 Staff Application
+@bot.command()
+async def staffapp(ctx):
+    # 🔒 Only Founder can use this command
+    if FOUNDER_ROLE_ID not in [role.id for role in ctx.author.roles]:
+        return await ctx.send("❌ Only the Founder can use this command.")
+
+    embed = discord.Embed(
+        title="📝 Staff Application",
+        description="""
+Interested in becoming a **staff member** at **Trade Market**?  
+
+We are looking for **dedicated, responsible, and active members** to help manage and moderate the server.  
+If you think you have what it takes, please **DM me directly** to submit your application.  
+
+**When applying, make sure to include the following information:**  
+• **Discord Name & Tag** (e.g., User#1234)  
+• **Previous Experience** in moderation, trading, or community management  
+• **Why you want to join our staff team**  
+• **Your availability** (how many hours per week you can dedicate)  
+• **Any relevant skills** (Discord bots, community support, etc.)  
+
+Applications will be **reviewed carefully**, and selected candidates will be contacted for further steps.  
+We value honesty, responsibility, and enthusiasm — make sure your application **reflects your dedication**. 💜  
+
+Thank you for your interest in helping make **Trade Market** a better and safer community!
+""",
+        color=discord.Color.purple()
+    )
+
+    embed.set_footer(text=f"{ctx.guild.name} | Official Staff Application")
+    await ctx.send(embed=embed)
+                                                                                                           
                                                 
 @bot.event
 async def on_ready():
