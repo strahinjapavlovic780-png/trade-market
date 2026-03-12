@@ -25,12 +25,12 @@ intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
 
-MM_ROLE_ID = 1449366378732589107
-MEMBER_ROLE_ID = 1449366374475497524
-FOUNDER_ROLE_ID = 1449366341822845011
-STAFF_CHANNEL_ID = 1449366415231553586
-MERCY_ROLE_ID = 1453614120673738936
-TICKET_CATEGORY_ID = 1449366391634399272
+MM_ROLE_ID = 1465699152653455546
+MEMBER_ROLE_ID = 1465699188628262963
+FOUNDER_ROLE_ID = 1465697938155110411
+STAFF_CHANNEL_ID = 1480919385966116916
+MERCY_ROLE_ID = 1465699224061743156
+TICKET_CATEGORY_ID = 1466889112652087539
 
 def is_mm():
     async def predicate(ctx):
@@ -181,7 +181,7 @@ class TicketButtons(discord.ui.View):
         self.creator = creator
         self.claimer = None
 
-    @discord.ui.button(label="Claim", style=discord.ButtonStyle.green)
+    @discord.ui.button(label="✔️Claim", style=discord.ButtonStyle.green)
     async def claim(self, interaction: discord.Interaction, button: discord.ui.Button):
 
         if MM_ROLE_ID not in [role.id for role in interaction.user.roles]:
@@ -204,7 +204,7 @@ class TicketButtons(discord.ui.View):
             f"🔒 {interaction.user.mention} claimed this ticket."
         )
 
-    @discord.ui.button(label="Add User", style=discord.ButtonStyle.blurple)
+    @discord.ui.button(label="➕Add User", style=discord.ButtonStyle.blurple)
     async def add_user_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
 
         if MM_ROLE_ID not in [role.id for role in interaction.user.roles]:
@@ -261,7 +261,7 @@ async def add(ctx, member: discord.Member):
     embed = discord.Embed(
         title="✅ User Successfully Added",
         description=f"{member.mention} has been added to the ticket and can now participate in the trade.",
-        color=discord.Color.green()
+        color=discord.Color.purple()
     )
 
     await ctx.send(embed=embed)
@@ -283,7 +283,7 @@ async def remove(ctx, member: discord.Member):
     embed = discord.Embed(
         title="❌ User Removed",
         description=f"{member.mention} has been removed from the ticket.",
-        color=discord.Color.red()
+        color=discord.Color.purple()
     )
 
     await ctx.send(embed=embed)
@@ -304,7 +304,7 @@ async def claim(ctx):
         title="✅ Ticket Claimed",
         description=f"{ctx.author.mention} has claimed this ticket!\n\n"
                     f"Ticket is now private.",
-        color=discord.Color.green()
+        color=discord.Color.purple()
     ) 
 
     await ctx.channel.send(embed=embed)
@@ -339,7 +339,7 @@ async def unclaim(ctx):
         title="🔓 Ticket Unclaimed",
         description=f"{ctx.author.mention} has unclaimed this ticket.\n\n"
                     f"Another MM can now claim it.",
-        color=discord.Color.orange()
+        color=discord.Color.purple()
     )
 
     await ctx.channel.send(embed=embed)
@@ -356,7 +356,7 @@ async def panel(ctx):
         title="Middleman Service",
         description=(
             "Welcome to our middleman service centre.\n\n"
-            "At **Eneba**, we provide a safe and secure way to exchange your goods, "
+            "At **Trade Market**, we provide a safe and secure way to exchange your goods, "
             "whether it's in-game items, crypto or digital assets.\n\n"
             "Our trusted middleman team ensures that both parties receive exactly what they agreed upon "
             "with **zero risk of scams**.\n\n"
@@ -368,9 +368,9 @@ async def panel(ctx):
             "• Agree on the trade terms.\n"
             "• Click the dropdown below.\n"
             "• Wait for a staff member.\n\n"
-            "**Eneba • Trusted Middleman Service**"
+            "**Trade Market • Trusted Middleman Service**"
         ),
-        color=discord.Color.blue()
+        color=discord.Color.purple()
     )
 
     await ctx.send(embed=embed, view=MMView())
@@ -384,7 +384,7 @@ async def howmmworks(ctx):
     embed = discord.Embed(
         title="How a Middleman Works",
         description=(
-            "🔐 **How Eneba's Middleman Service Works**\n\n"
+            "🔐 **How Trade Market's Middleman Service Works**\n\n"
 
             "Welcome to **Eneba's Middleman Service**, where your trades are handled with "
             "**maximum security, transparency, and professionalism**.\n\n"
@@ -411,16 +411,16 @@ async def howmmworks(ctx):
             "7️⃣ Once both sides confirm, the MM safely releases the assets.\n\n"
 
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "🌟 **Eneba's Middleman Service Guarantee**\n"
+            "🌟 **Trade Market's Middleman Service Guarantee**\n"
             "We ensure a **secure, neutral, and protected environment** for every trade.\n"
             "Our reputation is built on **trust, safety, and successful transactions**.\n\n"
 
             "💜 Trade safely. Trade smart. Trade with confidence."
         ),
-        color=discord.Color.blue()
+        color=discord.Color.purple()
     )
 
-    embed.set_footer(text="Eneba | Official Middleman System")
+    embed.set_footer(text="Trade Market | Official Middleman System")
 
     await ctx.send(embed=embed)
 
@@ -431,7 +431,7 @@ async def policy(ctx):
 
     embed = discord.Embed(
         title="Middleman Accountability & Compensation Policy",
-        color=discord.Color.blue()
+        color=discord.Color.purple()
     )
 
     embed.add_field(
@@ -464,7 +464,7 @@ async def policy(ctx):
         inline=False
     )
 
-    embed.set_footer(text="Eneba | Protection Guaranteed")
+    embed.set_footer(text="Trade Market | Protection Guaranteed")
 
     await ctx.send(embed=embed)
 
@@ -569,7 +569,7 @@ async def fee(ctx):
             "🔹 **Custom Split** – Choose your own percentage distribution.\n\n"
             "Click one of the buttons below to confirm how the fee will be paid."
         ),
-        color=discord.Color.blue()
+        color=discord.Color.purple()
     )
 
     await ctx.send(embed=embed, view=FeeView(ctx.author))
@@ -592,12 +592,12 @@ async def confirm(ctx, user1: discord.Member, user2: discord.Member):
             "The transaction is now protected and logged under our official policy system.\n\n"
             "**Trade Protection Status: ACTIVE ✅**"
         ),
-        color=discord.Color.green()
+        color=discord.Color.purple()
     )
 
     embed.add_field(name="Trader 1", value=user1.mention, inline=False)
     embed.add_field(name="Trader 2", value=user2.mention, inline=False)
-    embed.set_footer(text="Eneba | Secure Middleman Protection System")
+    embed.set_footer(text="Trade Market | Secure Middleman Protection System")
 
     await ctx.send(embed=embed)
 
@@ -609,7 +609,7 @@ async def help(ctx):
         return await ctx.send("❌ Only the Founder can use this command.")
 
     embed = discord.Embed(
-        title="📘 Enebas Bot Commands",
+        title="📘 Trade Market's Bot Commands",
         description="Here is a list of all available commands",
         color=discord.Color.purple()
     )
@@ -899,7 +899,7 @@ You have one minute to respond.
 
 **The decision is yours. Make it count.**
 """,
-        color=discord.Color.blue()
+        color=discord.Color.purple()
     )
     await ctx.send(
     embed=embed,
