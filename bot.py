@@ -917,9 +917,9 @@ async def on_ready():
     bot.add_view(MercyView(None))
     
 
-token = os.getenv("TOKEN1")
+token = os.getenv("TOKEN")
 
 if not token:
     raise ValueError("TOKEN1 environment variable is not set.")
 
-bot.run(TOKEN1)
+bot.run(TOKEN)
