@@ -43,6 +43,7 @@ VICE_PRESIDENT_ROLE_ID = 1465697969851601050
 OWNER_ROLE_ID = 1465695641320685730
 WELCOME_CHANNEL_ID = 1478783015017648259
 INVITE_LOG_CHANNEL_ID = 1479054141312471092
+VERIFIED_ROLE_ID = 1481803146366947510
 
 LOG_CHANNEL_NAME = "mod-logs"
 COOLDOWN = 300
@@ -1749,6 +1750,59 @@ async def on_member_join(member):
     if invite_channel:
         await invite_channel.send(embed=invite_embed)
 
+class VerifyButton(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="Verify", style=discord.ButtonStyle.green, emoji="✅")
+    async def verify(self, interaction: discord.Interaction, button: discord.ui.Button):
+
+        role = interaction.guild.get_role(VERIFIED_ROLE_ID)
+
+        if role is None:
+            return await interaction.response.send_message(
+                "❌ Verified Trader role not found.",
+                ephemeral=True
+            )
+
+        if role in interaction.user.roles:
+            return await interaction.response.send_message(
+                "❌ You are already verified.",
+                ephemeral=True
+            )
+
+        await interaction.user.add_roles(role)
+
+        embed = discord.Embed(
+            title="💜 Trade Market | Verification Complete",
+            description=(
+                f"**{interaction.user.mention} is now a** **Verified Trader**.\n\n"
+                "**You now have access to the server.**"
+            ),
+            color=PURPLE
+        )
+
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        
+@bot.command()
+async def verify(ctx):
+
+    if FOUNDER_ROLE_ID not in [role.id for role in ctx.author.roles]:
+        return await ctx.send("❌ Only the Founder can use this command.")
+
+    embed = discord.Embed(
+        title="💜 Trade Market | Verification",
+        description=(
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
+            "**Click the button below to verify.**\n\n"
+            "You will receive the **Verified Trader** role.\n"
+            "━━━━━━━━━━━━━━━━━━━━━━"
+        ),
+        color=PURPLE
+    )
+
+    await ctx.send(embed=embed, view=VerifyButton())
+
 
 @bot.event
 async def on_ready():
@@ -1758,7 +1812,7 @@ async def on_ready():
         invite_cache[guild.id] = await guild.invites()
 
     bot.add_view(MercyView(None))
-
+    bot.add_view(VerifyButton())
 
 token = os.getenv("TOKEN")
 
