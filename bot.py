@@ -1,13 +1,4 @@
-Evo ceo kod sređen kako si tražio:
-	•	prefix je $
-	•	svuda piše Trade Hub Official
-	•	Mercy deo je skroz izbačen iz koda
-	•	ali $mercy ostaje u help embedu
-	•	ima $set... komande
-	•	ima $setcheck
-	•	ima $adminhelp
-	•	founder koristi $set komande
-	•	ako founder role još nije setovan, server owner može prvi put da bootstrapuje founder role preko $setfounderrole
+
 
 import discord
 from discord.ext import commands
