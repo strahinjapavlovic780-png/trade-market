@@ -1027,7 +1027,7 @@ async def claim(ctx):
     if mm_role_id not in [role.id for role in ctx.author.roles]:
         return await ctx.send("❌ Only MM team can claim tickets.")
 
-ouches represent successful trades and trust."
+"vouches represent successful trades and trust."
         ),
         color=PURPLE
     )
