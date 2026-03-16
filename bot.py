@@ -1717,53 +1717,128 @@ async def confirm(ctx, user1: discord.Member, user2: discord.Member):
 
     await ctx.send(embed=embed)
 
-
 @bot.command()
 @founder_or_bootstrap()
 async def help(ctx):
 
     embed = discord.Embed(
-        title=f"💜 {ctx.guild.name} | Help Menu",
-        description="List of all commands",
+        title=f"💜 {ctx.guild.name} | Command Guide",
+        description="Below is the **complete list of commands** available in the server.",
         color=PURPLE
     )
 
     embed.add_field(
-        name="Info",
-        value="$about\n$tos\n$rules\n$support\n$value\n$marketrules\n$staffapp",
+        name="📘 **Information Commands**",
+        value=(
+            "**$about** — Shows information about the server.\n"
+            "**Access:** Founder\n\n"
+
+            "**$rules** — Displays the official server rules.\n"
+            "**Access:** Founder\n\n"
+
+            "**$tos** — Shows the server Terms of Service.\n"
+            "**Access:** Founder\n\n"
+
+            "**$support** — Displays support information.\n"
+            "**Access:** Founder\n\n"
+
+            "**$value** — Shows value lists for supported games.\n"
+            "**Access:** Founder\n\n"
+
+            "**$marketrules** — Displays marketplace rules.\n"
+            "**Access:** Founder\n\n"
+
+            "**$staffapp** — Information about staff applications.\n"
+            "**Access:** Founder"
+        ),
         inline=False
     )
 
     embed.add_field(
-        name="Middleman",
-        value="$panel\n$mmtos\n$howmmworks\n$policy\n$fee\n$confirm",
+        name="🛡️ **Middleman Commands**",
+        value=(
+            "**$panel** — Sends the middleman ticket panel.\n"
+            "**Access:** Founder\n\n"
+
+            "**$howmmworks** — Explains how the middleman service works.\n"
+            "**Access:** MM Team\n\n"
+
+            "**$mmtos** — Displays middleman terms of service.\n"
+            "**Access:** MM Team\n\n"
+
+            "**$policy** — Shows the compensation policy.\n"
+            "**Access:** MM Team\n\n"
+
+            "**$fee** — Opens the fee confirmation menu.\n"
+            "**Access:** MM Team\n\n"
+
+            "**$confirm @user1 @user2** — Confirms a trade between two users.\n"
+            "**Access:** MM Team"
+        ),
         inline=False
     )
 
     embed.add_field(
-        name="Tickets",
-        value="$claim\n$unclaim\n$close\n$add\n$remove",
+        name="🎫 **Ticket Commands**",
+        value=(
+            "**$claim** — Claim a ticket as the assigned middleman.\n"
+            "**Access:** MM Team\n\n"
+
+            "**$add @user** — Adds a user to the ticket.\n"
+            "**Access:** MM Team\n\n"
+
+            "**$remove @user** — Removes a user from the ticket.\n"
+            "**Access:** MM Team"
+        ),
         inline=False
     )
 
     embed.add_field(
-        name="Vouches",
-        value="$vouch\n$vouches\n$topvouches",
+        name="⭐ **Vouch Commands**",
+        value=(
+            "**$vouch @user** — Give a vouch to a trusted user.\n"
+            "**Access:** Everyone\n\n"
+
+            "**$topvouches** — Shows the leaderboard of most trusted users.\n"
+            "**Access:** MM Team"
+        ),
         inline=False
     )
 
     embed.add_field(
-        name="Moderation",
-        value="$purge\n$warn\n$warns\n$unwarn\n$kick\n$ban\n$unban",
+        name="🔨 **Moderation Commands**",
+        value=(
+            "**$purge [amount]** — Deletes a number of messages.\n"
+            "**Access:** Lead\n\n"
+
+            "**$warn @user [reason]** — Warn a member.\n"
+            "**Access:** Lead\n\n"
+
+            "**$warns @user** — Shows warning history.\n"
+            "**Access:** Lead\n\n"
+
+            "**$unwarn @user** — Removes all warnings from a user.\n"
+            "**Access:** Lead\n\n"
+
+            "**$kick @user [reason]** — Removes a member from the server.\n"
+            "**Access:** Executive\n\n"
+
+            "**$ban @user [reason]** — Bans a member from the server.\n"
+            "**Access:** Executive\n\n"
+
+            "**$unban userID** — Unbans a previously banned user.\n"
+            "**Access:** Executive"
+        ),
         inline=False
     )
 
-    embed.set_footer(text="Trade Hub Official | Official Help Menu")
+    embed.set_footer(text="Trade Hub Official | Command System")
 
     if ctx.guild.icon:
         embed.set_thumbnail(url=ctx.guild.icon.url)
 
     await ctx.send(embed=embed)
+
     
 
     
