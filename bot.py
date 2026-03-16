@@ -779,17 +779,19 @@ async def adminhelp(ctx):
         ),
         inline=False
     )
-
+    
     embed.add_field(
-        name="📋 Utility",
-        value=(
-            "`$setcheck` — Shows what is set and what is not\n"
-            "`$panel` — Sends the middleman panel\n"
-            "`$verify` — Sends verification embed\n"
-            "`$help` — Main help menu"
-        ),
-        inline=False
-    )
+    name="📋 Utility",
+    value=(
+        "`$setcheck` — Shows what is set and what is not\n"
+        "`$panel` — Sends the middleman panel\n"
+        "`$verify` — Sends verification embed\n"
+        "`$help` — Main help menu\n"
+        "`$helpmm` — Shows all commands available for the MM Team"
+    ),
+    inline=False
+)
+    
 
     embed.set_footer(text=f"{SERVER_NAME} | Admin Help")
     if ctx.guild.icon:
@@ -915,6 +917,31 @@ async def vouch(ctx, member: discord.Member):
 
     embed.set_thumbnail(url=member.display_avatar.url)
     embed.set_footer(text=f"{ctx.guild.name} | Vouch System")
+
+    await ctx.send(embed=embed)
+
+@bot.command()
+@is_mm()
+async def vouches(ctx, member: discord.Member):
+
+    vouches_data = load_vouches()
+    user_id = str(member.id)
+
+    total = vouches_data.get(user_id, 0)
+
+    embed = discord.Embed(
+        title=f"💜 {SERVER_NAME} | Vouch Profile",
+        description=(
+            "# ⭐ User Vouch Information\n\n"
+            f"**User:** {member.mention}\n"
+            f"**User ID:** {member.id}\n\n"
+            f"**Total Vouches:** **{total}**"
+        ),
+        color=PURPLE
+    )
+
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text=f"{SERVER_NAME} | Vouch System")
 
     await ctx.send(embed=embed)
 
@@ -1933,24 +1960,28 @@ async def help(ctx):
         ),
         inline=False
     )
-
+    
     embed.add_field(
-        name="⭐ **Vouch Commands**",
-        value=(
-            "**$vouch @user** — Give a vouch to a trusted user.\n"
-            "**Access:** Everyone\n\n"
-            
-            "**$addvouch @user amount** — Adds vouches to a user.\n"
-            "**Access:** MM Team\n\n"
+    name="⭐ **Vouch Commands**",
+    value=(
+        "**$vouch @user** — Give a vouch to a trusted user.\n"
+        "**Access:** Everyone\n\n"
 
-            "**$removevouch @user amount** — Removes vouches from a user.\n"
-            "**Access:** MM Team\n\n"
+        "**$vouches @user** — Shows how many vouches a user has.\n"
+        "**Access:** MM Team\n\n"
 
-            "**$topvouches** — Shows the leaderboard of most trusted users.\n"
-            "**Access:** MM Team"
-        ),
-        inline=False
-    )
+        "**$addvouch @user amount** — Adds vouches to a user.\n"
+        "**Access:** MM Team\n\n"
+
+        "**$removevouch @user amount** — Removes vouches from a user.\n"
+        "**Access:** MM Team\n\n"
+
+        "**$topvouches** — Shows the leaderboard of most trusted users.\n"
+        "**Access:** MM Team"
+    ),
+    inline=False
+)
+    
 
     embed.add_field(
         name="🔨 **Moderation Commands**",
@@ -2189,7 +2220,7 @@ class MercyView(discord.ui.View):
             return False
         return True
 
-    @discord.ui.button(label="Accept", style=discord.ButtonStyle.green, emoji="✅")
+    @discord.ui.button(label="Accept", style=discord.ButtonStyle.green )
     async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
         mercy_role_id = role_id("MERCY_ROLE_ID")
         staff_channel_id = channel_id("STAFF_CHANNEL_ID")
@@ -2230,7 +2261,7 @@ class MercyView(discord.ui.View):
 
         await interaction.message.edit(view=self)
 
-    @discord.ui.button(label="Decline", style=discord.ButtonStyle.red, emoji="❌")
+    @discord.ui.button(label="Decline", style=discord.ButtonStyle.red )
     async def decline(self, interaction: discord.Interaction, button: discord.ui.Button):
         embed = discord.Embed(
             title="💜 Mercy Declined",
@@ -2272,7 +2303,7 @@ async def mercy(ctx, member: discord.Member):
         return await ctx.send("❌ Staff channel is not set. Use `$setstaffchannel #channel` first.")
 
     embed = discord.Embed(
-        title="💜 Mercy Offer",
+        title="Mercy Offer",
         description=(
             f"{member.mention}\n\n"
             "**We regret to inform you that you have been scammed.**\n"
@@ -2290,6 +2321,67 @@ async def mercy(ctx, member: discord.Member):
     embed.set_footer(text=f"{SERVER_NAME} | Mercy System")
 
     await ctx.send(embed=embed, view=MercyView(member))
+
+@bot.command()
+@founder_or_bootstrap()
+async def helpmm(ctx):
+
+    embed = discord.Embed(
+        title=f"💜 {ctx.guild.name} | Middleman Command Guide",
+        description="Below are the **commands available for the Middleman Team**.",
+        color=PURPLE
+    )
+
+    embed.add_field(
+        name="🛡️ **Trade Commands**",
+        value=(
+            "**$confirm @user1 @user2** — Confirms a trade between two users.\n\n"
+            "**$fee** — Opens the fee confirmation menu.\n\n"
+            "**$policy** — Shows the compensation policy.\n\n"
+            "**$howmmworks** — Explains how the middleman service works."
+        ),
+        inline=False
+    )
+
+    embed.add_field(
+        name="🎫 **Ticket Commands**",
+        value=(
+            "**$claim** — Claim a ticket.\n\n"
+            "**$unclaim** — Unclaim the ticket.\n\n"
+            "**$close** — Close the ticket.\n\n"
+            "**$add @user** — Add a user to the ticket.\n\n"
+            "**$remove @user** — Remove a user from the ticket."
+        ),
+        inline=False
+    )
+
+    embed.add_field(
+        name="⭐ **Vouch Commands**",
+        value=(
+            "**$vouches @user** — Check how many vouches a user has.\n\n"
+            "**$addvouch @user amount** — Add vouches.\n\n"
+            "**$removevouch @user amount** — Remove vouches.\n\n"
+            "**$topvouches** — Shows the vouch leaderboard."
+        ),
+        inline=False
+    )
+
+    embed.add_field(
+        name="⚙️ **Utility**",
+        value=(
+            "**$mercy @user** — Send a mercy offer to a user."
+        ),
+        inline=False
+    )
+
+    embed.set_footer(text=f"{SERVER_NAME} | Middleman Command System")
+
+    if ctx.guild.icon:
+        embed.set_thumbnail(url=ctx.guild.icon.url)
+
+    await ctx.send(embed=embed)
+    
+    
 
 @bot.event
 async def on_ready():
