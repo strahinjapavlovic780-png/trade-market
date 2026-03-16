@@ -1017,7 +1017,6 @@ async def remove(ctx, member: discord.Member):
 
     await ctx.send(embed=embed)
 
-
 @bot.command()
 async def claim(ctx):
     if not is_ticket_channel(ctx.channel):
@@ -1027,13 +1026,23 @@ async def claim(ctx):
     if mm_role_id not in [role.id for role in ctx.author.roles]:
         return await ctx.send("❌ Only MM team can claim tickets.")
 
-"vouches represent successful trades and trust."
+    success, error = await apply_claim_permissions(ctx.channel, ctx.author)
+
+    if not success:
+        return await ctx.send(error)
+
+    embed = discord.Embed(
+        title=f"💜 {SERVER_NAME} | Ticket Claimed",
+        description=(
+            "# Ticket Claimed\n"
+            f"This ticket has been claimed by {ctx.author.mention}.\n\n"
+            "## Status\n"
+            "**Other middlemen can no longer view it.**"
         ),
         color=PURPLE
     )
 
-    embed.set_thumbnail(url=member.display_avatar.url)
-    embed.set_footer(text=f"{ctx.guild.name} | Vouch System")
+    embed.set_footer(text=f"{SERVER_NAME} | Ticket System")
 
     await ctx.send(embed=embed)
 
