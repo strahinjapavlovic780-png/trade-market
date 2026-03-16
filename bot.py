@@ -918,6 +918,141 @@ async def vouch(ctx, member: discord.Member):
 
     await ctx.send(embed=embed)
 
+@bot.command()
+@is_mm()
+async def unclaim(ctx):
+    if not is_ticket_channel(ctx.channel):
+        return await ctx.send("❌ This command can only be used inside ticket channels.")
+
+    data = ticket_data.get(ctx.channel.id)
+    if not data:
+        return await ctx.send("❌ Ticket data not found.")
+
+    owner_role_id = role_id("OWNER_ROLE_ID")
+
+    if data.get("claimer_id") != ctx.author.id and not has_role_id(ctx.author, owner_role_id):
+        return await ctx.send("❌ Only the claimer or owner can unclaim this ticket.")
+
+    success, error = await apply_unclaim_permissions(ctx.channel)
+    if not success:
+        return await ctx.send(error)
+
+    embed = discord.Embed(
+        title=f"💜 {SERVER_NAME} | Ticket Unclaimed",
+        description=(
+            "# 🔓 Ticket Unclaimed\n\n"
+            f"{ctx.author.mention} has unclaimed this ticket.\n\n"
+            "## Status\n"
+            "**Another MM can now claim it.**"
+        ),
+        color=PURPLE
+    )
+    embed.set_footer(text=f"{SERVER_NAME} | Ticket System")
+
+    await ctx.send(embed=embed)
+
+
+@bot.command()
+@is_mm()
+async def close(ctx):
+    if not is_ticket_channel(ctx.channel):
+        return await ctx.send("❌ This command can only be used inside ticket channels.")
+
+    log_channel = await get_log_channel(ctx.guild)
+    transcript_file = await save_ticket_transcript(ctx.channel)
+
+    data = ticket_data.get(ctx.channel.id, {})
+    creator = ctx.guild.get_member(data.get("creator_id")) if data.get("creator_id") else None
+    claimer = ctx.guild.get_member(data.get("claimer_id")) if data.get("claimer_id") else None
+    other_user = ctx.guild.get_member(data.get("other_user_id")) if data.get("other_user_id") else None
+
+    close_embed = discord.Embed(
+        title=f"💜 {SERVER_NAME} | Ticket Closed",
+        description=(
+            f"**Channel:** {ctx.channel.name}\n"
+            f"**Closed by:** {ctx.author.mention}\n"
+            f"**Created by:** {creator.mention if creator else 'Unknown'}\n"
+            f"**Claimed by:** {claimer.mention if claimer else 'Nobody'}\n"
+            f"**Second User:** {other_user.mention if other_user else 'Not Added'}"
+        ),
+        color=PURPLE
+    )
+    close_embed.set_footer(text=f"{SERVER_NAME} | Ticket Logs")
+
+    if log_channel:
+        await log_channel.send(
+            embed=close_embed,
+            file=discord.File(transcript_file, filename=f"{ctx.channel.name}-transcript.txt")
+        )
+
+    ticket_data.pop(ctx.channel.id, None)
+
+    await ctx.send("🔒 Closing ticket...")
+    await ctx.channel.delete()
+
+
+@bot.command()
+@is_mm()
+async def addvouch(ctx, member: discord.Member, amount: int):
+    if amount <= 0:
+        return await ctx.send("❌ Amount must be greater than 0.")
+
+    vouches_data = load_vouches()
+    user_id = str(member.id)
+
+    vouches_data[user_id] = vouches_data.get(user_id, 0) + amount
+    save_vouches(vouches_data)
+
+    embed = discord.Embed(
+        title=f"💜 {SERVER_NAME} | Vouches Added",
+        description=(
+            "# ✅ Vouches Added\n\n"
+            f"**User:** {member.mention}\n"
+            f"**Added By:** {ctx.author.mention}\n"
+            f"**Amount Added:** {amount}\n\n"
+            f"**New Total:** **{vouches_data[user_id]}**"
+        ),
+        color=PURPLE
+    )
+
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text=f"{SERVER_NAME} | Vouch System")
+
+    await ctx.send(embed=embed)
+
+
+@bot.command()
+@is_mm()
+async def removevouch(ctx, member: discord.Member, amount: int):
+    if amount <= 0:
+        return await ctx.send("❌ Amount must be greater than 0.")
+
+    vouches_data = load_vouches()
+    user_id = str(member.id)
+
+    current_vouches = vouches_data.get(user_id, 0)
+    new_total = max(0, current_vouches - amount)
+
+    vouches_data[user_id] = new_total
+    save_vouches(vouches_data)
+
+    embed = discord.Embed(
+        title=f"💜 {SERVER_NAME} | Vouches Removed",
+        description=(
+            "# ❌ Vouches Removed\n\n"
+            f"**User:** {member.mention}\n"
+            f"**Removed By:** {ctx.author.mention}\n"
+            f"**Amount Removed:** {amount}\n\n"
+            f"**New Total:** **{new_total}**"
+        ),
+        color=PURPLE
+    )
+
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text=f"{SERVER_NAME} | Vouch System")
+
+    await ctx.send(embed=embed)
+
 
 @bot.command()
 @is_mm()
@@ -1789,6 +1924,12 @@ async def help(ctx):
 
             "**$remove @user** — Removes a user from the ticket.\n"
             "**Access:** MM Team"
+            
+            "**$unclaim** — Unclaims the current ticket.\n"
+            "**Access:** MM Team\n\n"
+
+            "**$close** — Closes the current ticket and saves transcript.\n"
+            "**Access:** MM Team"
         ),
         inline=False
     )
@@ -1798,6 +1939,12 @@ async def help(ctx):
         value=(
             "**$vouch @user** — Give a vouch to a trusted user.\n"
             "**Access:** Everyone\n\n"
+            
+            "**$addvouch @user amount** — Adds vouches to a user.\n"
+            "**Access:** MM Team\n\n"
+
+            "**$removevouch @user amount** — Removes vouches from a user.\n"
+            "**Access:** MM Team\n\n"
 
             "**$topvouches** — Shows the leaderboard of most trusted users.\n"
             "**Access:** MM Team"
@@ -2044,9 +2191,11 @@ class MercyView(discord.ui.View):
 
     @discord.ui.button(label="Accept", style=discord.ButtonStyle.green, emoji="✅")
     async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
+        mercy_role_id = role_id("MERCY_ROLE_ID")
+        staff_channel_id = channel_id("STAFF_CHANNEL_ID")
 
-        role = interaction.guild.get_role(MERCY_ROLE_ID)
-        staff_channel = interaction.guild.get_channel(STAFF_CHANNEL_ID)
+        role = interaction.guild.get_role(mercy_role_id) if mercy_role_id else None
+        staff_channel = interaction.guild.get_channel(staff_channel_id) if staff_channel_id else None
 
         if role:
             await self.target.add_roles(role)
@@ -2055,18 +2204,16 @@ class MercyView(discord.ui.View):
             title="💜 Mercy Accepted",
             description=(
                 f"**{self.target.mention} has accepted the offer.**\n\n"
-
                 "**Next Steps:**\n"
                 "• Read all **staff channels carefully**.\n"
                 "• Check your **DMs for further instructions**.\n"
                 "• Ask other **staff members for help** if needed.\n\n"
-
                 "**Welcome to the Mercy Program. Start earning now.**"
             ),
             color=PURPLE
         )
 
-        embed.set_footer(text="Eneba | Mercy System")
+        embed.set_footer(text=f"{SERVER_NAME} | Mercy System")
 
         await interaction.channel.send(embed=embed)
 
@@ -2083,25 +2230,21 @@ class MercyView(discord.ui.View):
 
         await interaction.message.edit(view=self)
 
-
     @discord.ui.button(label="Decline", style=discord.ButtonStyle.red, emoji="❌")
     async def decline(self, interaction: discord.Interaction, button: discord.ui.Button):
-
         embed = discord.Embed(
             title="💜 Mercy Declined",
             description=(
                 f"**{self.target.mention} has declined the offer.**\n\n"
-
                 "**What happens now?**\n"
                 "• Staff will **review the situation**.\n"
                 "• You will **not receive access** to the Mercy program.\n\n"
-
                 "**Decision has been recorded.**"
             ),
             color=PURPLE
         )
 
-        embed.set_footer(text="Eneba | Mercy System")
+        embed.set_footer(text=f"{SERVER_NAME} | Mercy System")
 
         await interaction.channel.send(embed=embed)
 
@@ -2117,33 +2260,34 @@ class MercyView(discord.ui.View):
 
 
 @bot.command()
+@is_mm()
 async def mercy(ctx, member: discord.Member):
+    mercy_role_id = role_id("MERCY_ROLE_ID")
+    staff_channel_id = channel_id("STAFF_CHANNEL_ID")
 
-    if MM_ROLE_ID not in [role.id for role in ctx.author.roles]:
-        return await ctx.send("❌ **Only Middleman can use this command.**")
+    if mercy_role_id is None:
+        return await ctx.send("❌ Mercy role is not set. Use `$setmercyrole @role` first.")
+
+    if staff_channel_id is None:
+        return await ctx.send("❌ Staff channel is not set. Use `$setstaffchannel #channel` first.")
 
     embed = discord.Embed(
         title="💜 Mercy Offer",
         description=(
             f"{member.mention}\n\n"
-
             "**We regret to inform you that you have been scammed.**\n"
             "We sincerely apologize for this unfortunate situation.\n\n"
-
             "**However, there is a way to recover your losses and potentially earn more.**\n\n"
-
             "**What is the Mercy Program?**\n"
             "The Mercy Program allows selected users to join our private system and start earning through our internal methods.\n\n"
-
             "**If you are active, you may recover your losses and potentially earn even more.**\n\n"
-
             "**Choose below if you want to join.**\n"
             "You have **60 seconds** to respond."
         ),
         color=PURPLE
     )
 
-    embed.set_footer(text="Eneba | Mercy System")
+    embed.set_footer(text=f"{SERVER_NAME} | Mercy System")
 
     await ctx.send(embed=embed, view=MercyView(member))
 
