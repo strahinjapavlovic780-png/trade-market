@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 VOUCH_FILE = "vouches.json"
 CONFIG_FILE = "config.json"
 PURPLE = discord.Color.purple()
-SERVER_NAME = "Trade Hub Official"
+SERVER_NAME = "Trade Market"
 LOG_CHANNEL_NAME = "mod-logs"
 COOLDOWN = 300
 
@@ -1580,10 +1580,10 @@ async def verify(ctx):
 @is_mm()
 async def howmmworks(ctx):
     embed = discord.Embed(
-        title="💜 Trade Hub Official | How a Middleman Works",
+        title="💜 Trade Market | How a Middleman Works",
         description=(
-            "🔐 **How Trade Hub Official's Middleman Service Works**\n\n"
-            "Welcome to **Trade Hub Official's Middleman Service**, where your trades are handled with "
+            "🔐 **How Trade Market's Middleman Service Works**\n\n"
+            "Welcome to **Trade Market's Middleman Service**, where your trades are handled with "
             "**maximum security, transparency, and professionalism**.\n\n"
 
             "━━━━━━━━━━━━━━━━━━━━━━\n"
@@ -1608,13 +1608,13 @@ async def howmmworks(ctx):
             "7️⃣ Once both sides confirm, the MM safely releases the assets.\n\n"
 
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "🌟 **Trade Hub Official Middleman Service Guarantee**\n"
+            "🌟 **Trade Market Middleman Service Guarantee**\n"
             "We ensure a **secure, neutral, and protected environment** for every trade."
         ),
         color=PURPLE
     )
 
-    embed.set_footer(text="Trade Hub Official | Official Middleman System")
+    embed.set_footer(text="Trade Market | Official Middleman System")
     await ctx.send(embed=embed)
     
 @bot.command()
@@ -1622,7 +1622,7 @@ async def howmmworks(ctx):
 async def fee(ctx):
 
     embed = discord.Embed(
-        title="💜 Trade Hub Official | Middleman Service Fee Confirmation",
+        title="💜 Trade Market | Middleman Service Fee Confirmation",
         description=(
             "To ensure transparency and fairness, all middleman transactions may include a service fee.\n\n"
 
@@ -1637,7 +1637,7 @@ async def fee(ctx):
         color=PURPLE
     )
 
-    embed.set_footer(text="Trade Hub Official | Fee System")
+    embed.set_footer(text="Trade Market | Fee System")
 
     await ctx.send(embed=embed, view=FeeView())
     
@@ -1648,12 +1648,12 @@ async def fee(ctx):
 async def policy(ctx):
 
     embed = discord.Embed(
-        title="💜 Trade Hub Official | Compensation Policy",
+        title="💜 Trade Market | Compensation Policy",
         description=(
             "## Middleman Compensation Policy\n\n"
 
             "If a mistake happens during a trade handled by our MM team, "
-            "Trade Hub Official will review the case and provide compensation if needed.\n\n"
+            "Trade Market will review the case and provide compensation if needed.\n\n"
 
             "### Covered Situations\n"
             "• Middleman mistake\n"
@@ -1670,7 +1670,7 @@ async def policy(ctx):
         color=PURPLE
     )
 
-    embed.set_footer(text="Trade Hub Official | Policy System")
+    embed.set_footer(text="Trade Market | Policy System")
 
     await ctx.send(embed=embed)
     
@@ -1682,11 +1682,11 @@ async def confirm(ctx, user1: discord.Member, user2: discord.Member):
         return await ctx.send("❌ You cannot confirm a trade with the same user.")
 
     embed = discord.Embed(
-        title="💜 Trade Hub Official | Trade Confirmation",
+        title="💜 Trade Market | Trade Confirmation",
         description=(
             "# Official Trade Confirmation\n\n"
             "This trade has been **officially confirmed** under the supervision "
-            "of the **Trade Hub Official Middleman Team**.\n\n"
+            "of the **Trade Market Middleman Team**.\n\n"
 
             "Both parties have agreed to the full trade terms and conditions.\n\n"
 
@@ -1713,7 +1713,7 @@ async def confirm(ctx, user1: discord.Member, user2: discord.Member):
         inline=False
     )
 
-    embed.set_footer(text="Trade Hub Official | Secure Middleman System")
+    embed.set_footer(text="Trade Market | Secure Middleman System")
 
     await ctx.send(embed=embed)
 
@@ -1832,7 +1832,7 @@ async def help(ctx):
         inline=False
     )
 
-    embed.set_footer(text="Trade Hub Official | Command System")
+    embed.set_footer(text="Trade Market | Command System")
 
     if ctx.guild.icon:
         embed.set_thumbnail(url=ctx.guild.icon.url)
@@ -1954,7 +1954,7 @@ class MMModal(discord.ui.Modal):
         other_user_text = other_member.mention if other_member else self.other_user.value
 
         ticket_embed = discord.Embed(
-            title="💜 Trade Hub Official | New Middleman Ticket",
+            title="💜 Trade Market | New Middleman Ticket",
             description=(
                 "# New Ticket Created\n"
                 "A new **middleman request** has been submitted.\n\n"
@@ -1970,7 +1970,7 @@ class MMModal(discord.ui.Modal):
             color=PURPLE
         )
 
-        ticket_embed.set_footer(text="Trade Hub Official | Ticket System")
+        ticket_embed.set_footer(text="Trade Market | Ticket System")
 
         mention_parts = [interaction.user.mention]
 
@@ -1996,11 +1996,11 @@ class MMModal(discord.ui.Modal):
 async def panel(ctx):
 
     embed = discord.Embed(
-        title="💜 Trade Hub Official | Middleman Service",
+        title="💜 Trade Market  | Middleman Service",
         description=(
             "Welcome to our middleman service centre.\n\n"
 
-            "At **Trade Hub Official**, we provide a safe and secure way to exchange your goods, "
+            "At **Trade Market **, we provide a safe and secure way to exchange your goods, "
             "whether it's in-game items, crypto or digital assets.\n\n"
 
             "Our trusted middleman team ensures that both parties receive exactly what they agreed upon "
@@ -2017,15 +2017,135 @@ async def panel(ctx):
             "• Click the dropdown below.\n"
             "• Wait for a staff member.\n\n"
 
-            "**Trade Hub Official • Trusted Middleman Service**"
+            "**Trade Market • Trusted Middleman Service**"
         ),
         color=PURPLE
     )
 
-    embed.set_footer(text="Trade Hub Official | Official Middleman System")
+    embed.set_footer(text="Trade Market | Official Middleman System")
 
     await ctx.send(embed=embed, view=MMView())
 
+# ================= MERCY =================
+
+class MercyView(discord.ui.View):
+    def __init__(self, target: discord.Member):
+        super().__init__(timeout=60)
+        self.target = target
+
+    async def interaction_check(self, interaction: discord.Interaction):
+        if interaction.user.id != self.target.id:
+            await interaction.response.send_message(
+                "❌ **You are not allowed to respond to this offer.**",
+                ephemeral=True
+            )
+            return False
+        return True
+
+    @discord.ui.button(label="Accept", style=discord.ButtonStyle.green, emoji="✅")
+    async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
+
+        role = interaction.guild.get_role(MERCY_ROLE_ID)
+        staff_channel = interaction.guild.get_channel(STAFF_CHANNEL_ID)
+
+        if role:
+            await self.target.add_roles(role)
+
+        embed = discord.Embed(
+            title="💜 Mercy Accepted",
+            description=(
+                f"**{self.target.mention} has accepted the offer.**\n\n"
+
+                "**Next Steps:**\n"
+                "• Read all **staff channels carefully**.\n"
+                "• Check your **DMs for further instructions**.\n"
+                "• Ask other **staff members for help** if needed.\n\n"
+
+                "**Welcome to the Mercy Program. Start earning now.**"
+            ),
+            color=PURPLE
+        )
+
+        embed.set_footer(text="Eneba | Mercy System")
+
+        await interaction.channel.send(embed=embed)
+
+        if staff_channel:
+            await staff_channel.send(embed=embed)
+
+        await interaction.response.send_message(
+            "✅ **Offer accepted successfully.**",
+            ephemeral=True
+        )
+
+        for item in self.children:
+            item.disabled = True
+
+        await interaction.message.edit(view=self)
+
+
+    @discord.ui.button(label="Decline", style=discord.ButtonStyle.red, emoji="❌")
+    async def decline(self, interaction: discord.Interaction, button: discord.ui.Button):
+
+        embed = discord.Embed(
+            title="💜 Mercy Declined",
+            description=(
+                f"**{self.target.mention} has declined the offer.**\n\n"
+
+                "**What happens now?**\n"
+                "• Staff will **review the situation**.\n"
+                "• You will **not receive access** to the Mercy program.\n\n"
+
+                "**Decision has been recorded.**"
+            ),
+            color=PURPLE
+        )
+
+        embed.set_footer(text="Eneba | Mercy System")
+
+        await interaction.channel.send(embed=embed)
+
+        await interaction.response.send_message(
+            "❌ **Offer declined.**",
+            ephemeral=True
+        )
+
+        for item in self.children:
+            item.disabled = True
+
+        await interaction.message.edit(view=self)
+
+
+@bot.command()
+async def mercy(ctx, member: discord.Member):
+
+    if MM_ROLE_ID not in [role.id for role in ctx.author.roles]:
+        return await ctx.send("❌ **Only Middleman can use this command.**")
+
+    embed = discord.Embed(
+        title="💜 Mercy Offer",
+        description=(
+            f"{member.mention}\n\n"
+
+            "**We regret to inform you that you have been scammed.**\n"
+            "We sincerely apologize for this unfortunate situation.\n\n"
+
+            "**However, there is a way to recover your losses and potentially earn more.**\n\n"
+
+            "**What is the Mercy Program?**\n"
+            "The Mercy Program allows selected users to join our private system and start earning through our internal methods.\n\n"
+
+            "**If you are active, you may recover your losses and potentially earn even more.**\n\n"
+
+            "**Choose below if you want to join.**\n"
+            "You have **60 seconds** to respond."
+        ),
+        color=PURPLE
+    )
+
+    embed.set_footer(text="Eneba | Mercy System")
+
+    await ctx.send(embed=embed, view=MercyView(member))
 
 @bot.event
 async def on_ready():
