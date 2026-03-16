@@ -1731,6 +1731,219 @@ async def verify(ctx):
     )
 
     await ctx.send(embed=embed, view=VerifyButton())
+    
+@bot.command()
+@is_mm()
+async def howmmworks(ctx):
+    embed = discord.Embed(
+        title="💜 Trade Hub Official | How a Middleman Works",
+        description=(
+            "🔐 **How Trade Hub Official's Middleman Service Works**\n\n"
+            "Welcome to **Trade Hub Official's Middleman Service**, where your trades are handled with "
+            "**maximum security, transparency, and professionalism**.\n\n"
+
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
+            "🛡️ **Why Use a Middleman?**\n"
+            "A middleman protects both parties during a trade. Instead of trusting a stranger, "
+            "both users trust our verified MM team.\n\n"
+
+            "With our service:\n"
+            "• 🚫 No scams\n"
+            "• 🔒 No risk of chargebacks\n"
+            "• 🤝 Fair trade guarantee\n"
+            "• 📜 Proof and documentation of the deal\n\n"
+
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
+            "📩 **Step-By-Step Process**\n"
+            "1️⃣ Both users agree on the trade terms.\n"
+            "2️⃣ Open a ticket and select the trade type.\n"
+            "3️⃣ Provide clear trade details inside the ticket.\n"
+            "4️⃣ An official MM team member will claim the ticket.\n"
+            "5️⃣ The buyer sends the payment/item to the MM.\n"
+            "6️⃣ After confirmation, the seller delivers their part.\n"
+            "7️⃣ Once both sides confirm, the MM safely releases the assets.\n\n"
+
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
+            "🌟 **Trade Hub Official Middleman Service Guarantee**\n"
+            "We ensure a **secure, neutral, and protected environment** for every trade."
+        ),
+        color=PURPLE
+    )
+
+    embed.set_footer(text="Trade Hub Official | Official Middleman System")
+    await ctx.send(embed=embed)
+    
+@bot.command()
+@is_mm()
+async def fee(ctx):
+
+    embed = discord.Embed(
+        title="💜 Trade Hub Official | Middleman Service Fee Confirmation",
+        description=(
+            "To ensure transparency and fairness, all middleman transactions may include a service fee.\n\n"
+
+            "Please choose how the fee will be handled for this trade:\n\n"
+
+            "🔹 **50% / 50% Split** – Both users share the fee equally.\n"
+            "🔹 **100% One User Pays** – One trader covers the entire fee.\n"
+            "🔹 **Custom Split** – Choose your own percentage distribution.\n\n"
+
+            "Click one of the buttons below to confirm how the fee will be paid."
+        ),
+        color=PURPLE
+    )
+
+    embed.set_footer(text="Trade Hub Official | Fee System")
+
+    await ctx.send(embed=embed, view=FeeView(ctx.author))
+    
+@bot.command()
+@is_mm()
+async def mmtos(ctx):
+
+    embed = discord.Embed(
+        title="💜 Trade Hub Official | Middleman Terms of Service",
+        description="Welcome to **Trade Hub Official MM Services**! To ensure **safe and fair trades**, please read the rules below carefully.",
+        color=PURPLE
+    )
+
+    embed.add_field(
+        name="1️⃣ Use Middleman Services Properly",
+        value="Only request a MM in designated channels.",
+        inline=False
+    )
+
+    embed.add_field(
+        name="2️⃣ Respect MM Decisions",
+        value="Middlemen have the **final say** in disputes.",
+        inline=False
+    )
+
+    embed.add_field(
+        name="3️⃣ Provide Accurate Info",
+        value="Always provide **full and correct trade details**.",
+        inline=False
+    )
+
+    embed.add_field(
+        name="4️⃣ No Bypassing the MM",
+        value="**Do not bypass** the middleman.",
+        inline=False
+    )
+
+    embed.add_field(
+        name="5️⃣ Report Issues Responsibly",
+        value="Report problems to moderators immediately.",
+        inline=False
+    )
+
+    embed.set_footer(text="Trade Hub Official | Official Middleman Terms")
+    await ctx.send(embed=embed)
+    
+@bot.command()
+@is_mm()
+async def policy(ctx):
+
+    embed = discord.Embed(
+        title="💜 Trade Hub Official | Compensation Policy",
+        description=(
+            "## Middleman Compensation Policy\n\n"
+
+            "If a mistake happens during a trade handled by our MM team, "
+            "Trade Hub Official will review the case and provide compensation if needed.\n\n"
+
+            "### Covered Situations\n"
+            "• Middleman mistake\n"
+            "• Item loss during MM custody\n"
+            "• Confirmed internal error\n\n"
+
+            "### Not Covered\n"
+            "• Fake items\n"
+            "• Chargebacks\n"
+            "• Deals done outside the ticket\n\n"
+
+            "All cases are reviewed by **server executives**."
+        ),
+        color=PURPLE
+    )
+
+    embed.set_footer(text="Trade Hub Official | Policy System")
+
+    await ctx.send(embed=embed)
+    
+@bot.command()
+@is_mm()
+async def confirm(ctx, user1: discord.Member, user2: discord.Member):
+
+    embed = discord.Embed(
+        title="💜 Trade Hub Official | Official Trade Confirmation",
+        description=(
+            "This trade has been officially confirmed under the supervision of our Middleman Team.\n\n"
+
+            "Both parties listed below have agreed to the full trade terms and fee structure.\n\n"
+
+            "**Trade Protection Status: ACTIVE ✅**"
+        ),
+        color=PURPLE
+    )
+
+    embed.add_field(name="Trader 1", value=user1.mention, inline=False)
+    embed.add_field(name="Trader 2", value=user2.mention, inline=False)
+
+    embed.set_footer(text="Trade Hub Official | Secure Middleman System")
+
+    await ctx.send(embed=embed)
+    
+@bot.command()
+async def help(ctx):
+
+    if FOUNDER_ROLE_ID not in [role.id for role in ctx.author.roles]:
+        return await ctx.send("❌ Only the Founder can use this command.")
+
+    embed = discord.Embed(
+        title=f"💜 {ctx.guild.name} | Help Menu",
+        description="List of all commands",
+        color=PURPLE
+    )
+
+    embed.add_field(
+        name="Info",
+        value="$about\n$tos\n$rules\n$support\n$value\n$marketrules\n$staffapp",
+        inline=False
+    )
+
+    embed.add_field(
+        name="Middleman",
+        value="$panel\n$mmtos\n$howmmworks\n$policy\n$fee\n$confirm",
+        inline=False
+    )
+
+    embed.add_field(
+        name="Tickets",
+        value="$claim\n$unclaim\n$close\n$add\n$remove",
+        inline=False
+    )
+
+    embed.add_field(
+        name="Vouches",
+        value="$vouch\n$vouches\n$topvouches\n$addvouch\n$removevouch",
+        inline=False
+    )
+
+    embed.add_field(
+        name="Moderation",
+        value="$purge\n$warn\n$warns\n$unwarn\n$kick\n$ban\n$unban",
+        inline=False
+    )
+
+    embed.set_footer(text="Trade Hub Official | Official Help Menu")
+
+    if ctx.guild.icon:
+        embed.set_thumbnail(url=ctx.guild.icon.url)
+
+    await ctx.send(embed=embed)
+    
+
 
 
 @bot.event
