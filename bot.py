@@ -1678,30 +1678,49 @@ async def policy(ctx):
 @is_mm()
 async def confirm(ctx, user1: discord.Member, user2: discord.Member):
 
+    if user1 == user2:
+        return await ctx.send("❌ You cannot confirm a trade with the same user.")
+
     embed = discord.Embed(
-        title="💜 Trade Hub Official | Official Trade Confirmation",
+        title="💜 Trade Hub Official | Trade Confirmation",
         description=(
-            "This trade has been officially confirmed under the supervision of our Middleman Team.\n\n"
+            "# Official Trade Confirmation\n\n"
+            "This trade has been **officially confirmed** under the supervision "
+            "of the **Trade Hub Official Middleman Team**.\n\n"
 
-            "Both parties listed below have agreed to the full trade terms and fee structure.\n\n"
+            "Both parties have agreed to the full trade terms and conditions.\n\n"
 
-            "**Trade Protection Status: ACTIVE ✅**"
+            "🛡️ **Trade Protection Status:** ACTIVE"
         ),
         color=PURPLE
     )
 
-    embed.add_field(name="Trader 1", value=user1.mention, inline=False)
-    embed.add_field(name="Trader 2", value=user2.mention, inline=False)
+    embed.add_field(
+        name="Trader 1",
+        value=user1.mention,
+        inline=False
+    )
+
+    embed.add_field(
+        name="Trader 2",
+        value=user2.mention,
+        inline=False
+    )
+
+    embed.add_field(
+        name="Middleman",
+        value=ctx.author.mention,
+        inline=False
+    )
 
     embed.set_footer(text="Trade Hub Official | Secure Middleman System")
 
     await ctx.send(embed=embed)
-    
-@bot.command()
-async def help(ctx):
 
-    if FOUNDER_ROLE_ID not in [role.id for role in ctx.author.roles]:
-        return await ctx.send("❌ Only the Founder can use this command.")
+
+@bot.command()
+@founder_or_bootstrap()
+async def help(ctx):
 
     embed = discord.Embed(
         title=f"💜 {ctx.guild.name} | Help Menu",
@@ -1729,7 +1748,7 @@ async def help(ctx):
 
     embed.add_field(
         name="Vouches",
-        value="$vouch\n$vouches\n$topvouches\n$addvouch\n$removevouch",
+        value="$vouch\n$vouches\n$topvouches",
         inline=False
     )
 
@@ -1746,8 +1765,8 @@ async def help(ctx):
 
     await ctx.send(embed=embed)
     
-# ================= PANEL SELECT =================
 
+    
 class MMSelect(discord.ui.Select):
     def __init__(self):
         options = [
@@ -1766,19 +1785,14 @@ class MMSelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         await interaction.response.send_modal(MMModal(self.values[0]))
-
-
-# ================= PANEL VIEW =================
-
+        
 class MMView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
         self.add_item(MMSelect())
 
-
-# ================= MODAL =================
-
 class MMModal(discord.ui.Modal):
+
     def __init__(self, trade_type):
         super().__init__(title="Middleman Ticket")
 
@@ -1809,7 +1823,9 @@ class MMModal(discord.ui.Modal):
 
         guild = interaction.guild
 
-        category = guild.get_channel(TICKET_CATEGORY_ID)
+        ticket_category_id = role_id("TICKET_CATEGORY_ID")
+
+        category = guild.get_channel(ticket_category_id)
 
         if category is None:
             return await interaction.response.send_message(
@@ -1817,7 +1833,9 @@ class MMModal(discord.ui.Modal):
                 ephemeral=True
             )
 
-        mm_role = guild.get_role(MM_ROLE_ID)
+        mm_role_id = role_id("MM_ROLE_ID")
+        mm_role = guild.get_role(mm_role_id)
+
         other_member = extract_member_from_input(guild, self.other_user.value)
 
         overwrites = {
@@ -1893,20 +1911,45 @@ class MMModal(discord.ui.Modal):
             view=TicketButtons()
         )
 
-        if other_member:
-            await interaction.response.send_message(
-                f"✅ Your ticket has been created: {channel.mention}\n"
-                f"✅ {other_member.mention} was automatically added.",
-                ephemeral=True
-            )
-        else:
-            await interaction.response.send_message(
-                f"✅ Your ticket has been created: {channel.mention}",
-                ephemeral=True
-            )
+        await interaction.response.send_message(
+            f"✅ Your ticket has been created: {channel.mention}",
+            ephemeral=True
+        )
+        
+@bot.command()
+@founder_or_bootstrap()
+async def panel(ctx):
 
+    embed = discord.Embed(
+        title="💜 Trade Hub Official | Middleman Service",
+        description=(
+            "Welcome to our middleman service centre.\n\n"
 
+            "At **Trade Hub Official**, we provide a safe and secure way to exchange your goods, "
+            "whether it's in-game items, crypto or digital assets.\n\n"
 
+            "Our trusted middleman team ensures that both parties receive exactly what they agreed upon "
+            "with **zero risk of scams**.\n\n"
+
+            "**If you've found a trade and want to ensure your safety, "
+            "you can use our FREE middleman service by following the steps below.**\n\n"
+
+            "*Note: Large trades may include a small service fee.*\n\n"
+
+            "📌 **Usage Conditions**\n"
+            "• Find someone to trade with.\n"
+            "• Agree on the trade terms.\n"
+            "• Click the dropdown below.\n"
+            "• Wait for a staff member.\n\n"
+
+            "**Trade Hub Official • Trusted Middleman Service**"
+        ),
+        color=PURPLE
+    )
+
+    embed.set_footer(text="Trade Hub Official | Official Middleman System")
+
+    await ctx.send(embed=embed, view=MMView())
 
 
 @bot.event
