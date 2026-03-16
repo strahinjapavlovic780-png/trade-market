@@ -1943,7 +1943,188 @@ async def help(ctx):
 
     await ctx.send(embed=embed)
     
+# ================= PANEL SELECT =================
 
+class MMSelect(discord.ui.Select):
+    def __init__(self):
+        options = [
+            discord.SelectOption(label="🎮 In Game Items"),
+            discord.SelectOption(label="🪙 Crypto"),
+            discord.SelectOption(label="💳 PayPal"),
+        ]
+
+        super().__init__(
+            placeholder="Select trade type below",
+            min_values=1,
+            max_values=1,
+            options=options,
+            custom_id="mm_select_trade_type"
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.send_modal(MMModal(self.values[0]))
+
+
+# ================= PANEL VIEW =================
+
+class MMView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+        self.add_item(MMSelect())
+
+
+# ================= MODAL =================
+
+class MMModal(discord.ui.Modal):
+    def __init__(self, trade_type):
+        super().__init__(title="Middleman Ticket")
+
+        self.trade_type = trade_type
+
+        self.other_user = discord.ui.TextInput(
+            label="Other User (mention or name)",
+            required=True
+        )
+
+        self.trade_details = discord.ui.TextInput(
+            label="Trade Details",
+            style=discord.TextStyle.paragraph,
+            required=True
+        )
+
+        self.agreement = discord.ui.TextInput(
+            label="Do both users agree?",
+            placeholder="Type YES if both agreed",
+            required=True
+        )
+
+        self.add_item(self.other_user)
+        self.add_item(self.trade_details)
+        self.add_item(self.agreement)
+
+    async def on_submit(self, interaction: discord.Interaction):
+
+        guild = interaction.guild
+
+        category = guild.get_channel(TICKET_CATEGORY_ID)
+
+        if category is None:
+            return await interaction.response.send_message(
+                "❌ Ticket category not set. Use `$setticketcategory` first.",
+                ephemeral=True
+            )
+
+        mm_role = guild.get_role(MM_ROLE_ID)
+        other_member = extract_member_from_input(guild, self.other_user.value)
+
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(view_channel=False),
+            interaction.user: discord.PermissionOverwrite(
+                view_channel=True,
+                send_messages=True,
+                read_message_history=True
+            ),
+        }
+
+        if other_member:
+            overwrites[other_member] = discord.PermissionOverwrite(
+                view_channel=True,
+                send_messages=True,
+                read_message_history=True
+            )
+
+        if mm_role:
+            overwrites[mm_role] = discord.PermissionOverwrite(
+                view_channel=True,
+                send_messages=True,
+                read_message_history=True
+            )
+
+        channel = await guild.create_text_channel(
+            name=f"mm-{interaction.user.name}".lower().replace(" ", "-"),
+            category=category,
+            overwrites=overwrites
+        )
+
+        ticket_data[channel.id] = {
+            "creator_id": interaction.user.id,
+            "other_user_id": other_member.id if other_member else None,
+            "claimer_id": None,
+            "trade_type": self.trade_type,
+            "trade_details": self.trade_details.value,
+            "agreement": self.agreement.value
+        }
+
+        other_user_text = other_member.mention if other_member else self.other_user.value
+
+        ticket_embed = discord.Embed(
+            title="💜 Trade Hub Official | New Middleman Ticket",
+            description=(
+                "# New Ticket Created\n"
+                "A new **middleman request** has been submitted.\n\n"
+                "## Ticket Information\n"
+                f"**Trade Type:** {self.trade_type}\n"
+                f"**Other User:** {other_user_text}\n"
+                f"**Agreement:** {self.agreement.value}\n\n"
+                "## Trade Details\n"
+                f"{self.trade_details.value}\n\n"
+                "## Status\n"
+                "**Waiting for a Middleman to claim this ticket.**"
+            ),
+            color=PURPLE
+        )
+
+        ticket_embed.set_footer(text="Trade Hub Official | Ticket System")
+
+        mention_parts = [interaction.user.mention]
+
+        if other_member:
+            mention_parts.append(other_member.mention)
+
+        if mm_role:
+            mention_parts.append(mm_role.mention)
+
+        await channel.send(
+            content=" ".join(mention_parts),
+            embed=ticket_embed,
+            view=TicketButtons()
+        )
+
+        if other_member:
+            await interaction.response.send_message(
+                f"✅ Your ticket has been created: {channel.mention}\n"
+                f"✅ {other_member.mention} was automatically added.",
+                ephemeral=True
+            )
+        else:
+            await interaction.response.send_message(
+                f"✅ Your ticket has been created: {channel.mention}",
+                ephemeral=True
+            )
+
+
+# ================= PANEL COMMAND =================
+
+@bot.command()
+async def panel(ctx):
+
+    if FOUNDER_ROLE_ID not in [role.id for role in ctx.author.roles]:
+        return await ctx.send("❌ Only Founder can use this command.")
+
+    embed = discord.Embed(
+        title="💜 Trade Hub Official | Middleman Service",
+        description=(
+            "Welcome to our middleman service centre.\n\n"
+            "At **Trade Hub Official**, we provide a safe and secure way to exchange your goods.\n\n"
+            "Our trusted middleman team ensures both traders receive exactly what they agreed upon.\n\n"
+            "**Use the dropdown below to create a ticket.**"
+        ),
+        color=PURPLE
+    )
+
+    embed.set_footer(text="Trade Hub Official | Official Middleman System")
+
+    await ctx.send(embed=embed, view=MMView())
 
 
 @bot.event
