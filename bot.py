@@ -1641,48 +1641,7 @@ async def fee(ctx):
 
     await ctx.send(embed=embed, view=FeeView())
     
-@bot.command()
-@is_mm()
-async def mmtos(ctx):
 
-    embed = discord.Embed(
-        title="💜 Trade Hub Official | Middleman Terms of Service",
-        description="Welcome to **Trade Hub Official MM Services**! To ensure **safe and fair trades**, please read the rules below carefully.",
-        color=PURPLE
-    )
-
-    embed.add_field(
-        name="1️⃣ Use Middleman Services Properly",
-        value="Only request a MM in designated channels.",
-        inline=False
-    )
-
-    embed.add_field(
-        name="2️⃣ Respect MM Decisions",
-        value="Middlemen have the **final say** in disputes.",
-        inline=False
-    )
-
-    embed.add_field(
-        name="3️⃣ Provide Accurate Info",
-        value="Always provide **full and correct trade details**.",
-        inline=False
-    )
-
-    embed.add_field(
-        name="4️⃣ No Bypassing the MM",
-        value="**Do not bypass** the middleman.",
-        inline=False
-    )
-
-    embed.add_field(
-        name="5️⃣ Report Issues Responsibly",
-        value="Report problems to moderators immediately.",
-        inline=False
-    )
-
-    embed.set_footer(text="Trade Hub Official | Official Middleman Terms")
-    await ctx.send(embed=embed)
     
 @bot.command()
 @is_mm()
