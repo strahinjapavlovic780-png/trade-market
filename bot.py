@@ -1639,7 +1639,7 @@ async def fee(ctx):
 
     embed.set_footer(text="Trade Hub Official | Fee System")
 
-    await ctx.send(embed=embed, view=FeeView()
+    await ctx.send(embed=embed, view=FeeView())
     
 @bot.command()
 @is_mm()
